@@ -1,0 +1,15 @@
+[package]
+name = "tasks"
+version = "0.1.0"
+authors = ["Moritz Ulrich <moritz@tarn-vedra.de>"]
+
+[dependencies]
+bincode = "*"
+rustc-serialize = "*"
+uuid = "*"
+libc = "*"
+
+[dependencies.time]
+version = "*"
+features = ["rustc-serialize"]
+

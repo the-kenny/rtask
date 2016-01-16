@@ -1,0 +1,47 @@
+use time;
+use uuid;
+
+pub type Title = String;
+pub type Time = time::Timespec;
+pub type Uuid = uuid::Uuid;
+
+#[derive(RustcEncodable, RustcDecodable, Clone)]
+pub enum TaskState {
+  Open,
+  Done(Time)
+}
+
+#[derive(RustcEncodable, RustcDecodable, Clone)]
+#[allow(dead_code)]
+pub struct Task {
+  pub description: Title,
+  pub status: TaskState,
+  pub created: Time,
+  pub modified: Time,
+  pub uuid: Uuid,
+}
+
+impl Task {
+  pub fn new(description: &str) -> Self {
+    let now = time::get_time();
+    Task {
+      description: description.to_string(),
+      status: TaskState::Open,
+      created: now,
+      modified: now,
+      uuid: Uuid::new_v4(),
+    }
+  }
+
+  pub fn urgency(&self) -> f32 {
+    let diff = self.created - time::get_time();
+    let days = diff.num_days();
+
+    let mut urgency = 0.0;
+
+    // Add 0.01 for every day since creation
+    urgency = urgency + (days as f32 / 100.0);
+    
+    urgency
+  }
+}
