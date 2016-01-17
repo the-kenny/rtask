@@ -8,13 +8,13 @@ pub type Time = time::Timespec;
 pub type Uuid = uuid::Uuid;
 pub type Tags = HashSet<String>;
 
-#[derive(RustcEncodable, RustcDecodable, Clone)]
+#[derive(RustcEncodable, RustcDecodable, Clone, Debug, PartialEq)]
 pub enum TaskState {
   Open,
   Done(Time)
 }
 
-#[derive(RustcEncodable, RustcDecodable, Clone)]
+#[derive(RustcEncodable, RustcDecodable, Clone, Debug, PartialEq)]
 #[allow(dead_code)]
 pub struct Task {
   pub description: Title,

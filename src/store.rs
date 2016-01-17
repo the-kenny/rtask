@@ -16,21 +16,23 @@ pub struct TaskStore {
 }
 
 impl TaskStore {
-  pub fn load() -> Self {
-    let path = Path::new("tasks.bin");
-    
+  pub fn new() -> Self {
+    Self::load_from("tasks.bin")
+  }
+
+  fn load_from<P: AsRef<Path>>(path: P) -> Self {
     let mut file = fs::OpenOptions::new()
       .read(true)
       .write(true)
       .create(true)
-      .open(path)
+      .open(&path)
       .expect("Couldn't access tasks.bin");
 
     let lock = Lock::new(Path::new("tasks.pid")).unwrap();
-    
+
     let mut store = TaskStore {
       tasks: HashMap::new(),
-      tasks_path: path.to_path_buf(),
+      tasks_path: path.as_ref().to_path_buf(),
       _file_lock: lock
     };
 
@@ -47,7 +49,7 @@ impl TaskStore {
 
   fn deserialize(&mut self, store: DiskStore) {
     if store.version != 0 { panic!("Can't handle data with version {}", store.version) }
-    
+
     self.tasks.clear();
 
     let tasks = store.tasks.into_iter().map(|t| (t.uuid, t));
@@ -76,6 +78,38 @@ impl Drop for TaskStore {
   }
 }
 
+#[test]
+fn test_task_store() {
+  use std::{env, fs};
+  use std::io::ErrorKind;
+
+  let mut tempfile = env::temp_dir();
+  tempfile.push("tasks.bin");
+  match fs::remove_file(&tempfile) {
+    Err(ref e) if e.kind() == ErrorKind::NotFound => (),
+    Err(_) => panic!("Couldn't remove stale file `{:?}`", tempfile),
+    _ => (),
+  }
+
+  let task = Task::new("task #1");
+  {
+    let mut store = TaskStore::load_from(&tempfile);
+    assert_eq!(0, store.tasks.len());
+    store.tasks.insert(task.uuid, task.clone());
+    assert_eq!(1, store.tasks.len());
+    // store drops, gets serialized
+  }
+  {
+    // Load from file, check if everything is as we've left it
+    let store = TaskStore::load_from(&tempfile);
+    assert_eq!(1, store.tasks.len());
+    assert_eq!(Some(&task), store.tasks.get(&task.uuid));
+  }
+
+  fs::remove_file(tempfile).unwrap();
+}
+
+// On-Disk representation
 #[derive(RustcEncodable, RustcDecodable)]
 struct DiskStore {
   version: u32,
