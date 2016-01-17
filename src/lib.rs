@@ -8,3 +8,4 @@ pub mod task;
 pub mod store;
 
 mod file_lock;
+mod terminal_size;
