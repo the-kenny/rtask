@@ -15,7 +15,6 @@ pub enum TaskState {
 }
 
 #[derive(RustcEncodable, RustcDecodable, Clone, Debug, PartialEq)]
-#[allow(dead_code)]
 pub struct Task {
   pub description: Title,
   pub status: TaskState,
