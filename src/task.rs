@@ -1,9 +1,12 @@
 use time;
 use uuid;
 
+use std::collections::{HashSet};
+
 pub type Title = String;
 pub type Time = time::Timespec;
 pub type Uuid = uuid::Uuid;
+pub type Tags = HashSet<String>;
 
 #[derive(RustcEncodable, RustcDecodable, Clone)]
 pub enum TaskState {
@@ -19,6 +22,7 @@ pub struct Task {
   pub created: Time,
   pub modified: Time,
   pub uuid: Uuid,
+  pub tags: Tags,
 }
 
 impl Task {
@@ -30,6 +34,7 @@ impl Task {
       created: now,
       modified: now,
       uuid: Uuid::new_v4(),
+      tags: Tags::new(),
     }
   }
 

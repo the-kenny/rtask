@@ -1,7 +1,6 @@
 use libc;
 
 use std::path::Path;
-use std::convert::AsRef;
 use std::io;
 use std::ffi::CString;
 use std::os::unix::ffi::OsStringExt;

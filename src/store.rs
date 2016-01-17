@@ -3,7 +3,6 @@ use bincode::rustc_serialize::{decode_from, encode_into};
 use std::fs;
 use std::path::{Path,PathBuf};
 use std::io::{BufWriter};
-use std::iter::FromIterator;
 
 use ::task::{Task, Uuid};
 use ::file_lock::Lock;
@@ -13,7 +12,7 @@ use std::collections::{HashMap};
 pub struct TaskStore {
   pub tasks: HashMap<Uuid, Task>, // TODO: Make private
   tasks_path: PathBuf,
-  file_lock: Lock,
+  _file_lock: Lock,
 }
 
 impl TaskStore {
@@ -32,7 +31,7 @@ impl TaskStore {
     let mut store = TaskStore {
       tasks: HashMap::new(),
       tasks_path: path.to_path_buf(),
-      file_lock: lock
+      _file_lock: lock
     };
 
     let meta: fs::Metadata = file.metadata().expect("Couldn't get file metadata");
@@ -70,14 +69,12 @@ impl Drop for TaskStore {
       .read(true)
       .write(true)
       .create(true)
-      .open("tasks.bin").unwrap();
+      .open(&self.tasks_path).unwrap();
     let mut writer = BufWriter::new(file);
 
     encode_into(&self.serialize(), &mut writer, bincode::SizeLimit::Infinite).unwrap();
   }
 }
-
-use rustc_serialize::{Encodable, Encoder, Decodable, Decoder};
 
 #[derive(RustcEncodable, RustcDecodable)]
 struct DiskStore {
