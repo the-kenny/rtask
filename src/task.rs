@@ -48,4 +48,33 @@ impl Task {
     
     urgency
   }
+
+  pub fn mark_done(&mut self) {
+    use self::TaskState::*;
+    match self.status {
+      Open => self.status = Done(time::get_time()),
+      _ => ()
+    }
+  }
+}
+
+#[test]
+fn test_creation() {
+  let t = Task::new("foo");
+  assert_eq!(&t.description, "foo");
+  assert_eq!(t.status, TaskState::Open);
+  assert_eq!(t.tags, Tags::new());
+  assert_eq!(false, t.uuid.is_nil());
+}
+
+#[test]
+fn test_mark_done() {
+  use self::TaskState::*;
+  let mut t: Task = Task::new("foo");
+  assert_eq!(Open, t.status);
+  t.mark_done();
+  match t.status {
+    Done(_) => (),
+    _ => panic!("Task::mark_done() failed"),
+  }
 }

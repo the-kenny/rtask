@@ -79,7 +79,7 @@ impl Drop for TaskStore {
 }
 
 #[test]
-fn test_task_store() {
+fn test_serialization() {
   use std::{env, fs};
   use std::io::ErrorKind;
 
