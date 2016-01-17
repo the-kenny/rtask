@@ -1,8 +1,8 @@
-extern crate tasks;
+extern crate rtask;
 
 use std::env;
-use tasks::task::*;
-use tasks::store::*;
+use rtask::task::*;
+use rtask::store::*;
 use std::fs;
 use std::io::ErrorKind;
 
@@ -10,7 +10,7 @@ fn main() {
   chdir();
   
   let args: Vec<String> = env::args().skip(1).collect();
-  let command = args.get(0).expect("Usage: tasks COMMAND");
+  let command = args.get(0).expect("Usage: rtask COMMAND");
 
   let mut store = TaskStore::new();
   {
