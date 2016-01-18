@@ -12,11 +12,7 @@ fn main() {
   let args: Vec<String> = env::args().skip(1).collect();
   let command = args.get(0).expect("Usage: rtask COMMAND");
 
-  let mut store = TaskStore::new();
-  {
-    let task = Task::new("Implement this correctly!");
-    store.tasks.insert(task.uuid, task);
-  }
+  let store = TaskStore::new();
 
   match command.as_ref() {
     "list" => {
