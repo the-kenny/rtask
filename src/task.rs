@@ -38,7 +38,7 @@ impl Task {
   }
 
   pub fn urgency(&self) -> f32 {
-    let diff = self.created - time::get_time();
+    let diff = time::get_time() - self.created;
     let days = diff.num_days();
 
     let mut urgency = 0.0;
@@ -65,6 +65,16 @@ fn test_creation() {
   assert_eq!(t.status, TaskState::Open);
   assert_eq!(t.tags, Tags::new());
   assert_eq!(false, t.uuid.is_nil());
+}
+
+#[test]
+fn test_urgency() {
+  let mut t = Task::new("old");
+  let mut t2 = t.clone();
+  assert_eq!(t.urgency(), t2.urgency());
+  // Check if urgency increases when a job gets older
+  t2.created = t2.created - time::Duration::days(2);
+  assert!(t2.urgency() > t.urgency());
 }
 
 #[test]
