@@ -9,6 +9,8 @@ use ::file_lock::Lock;
 
 use std::collections::{HashMap};
 
+const PID_FILE: &'static str = "tasks.pid";
+
 pub struct TaskStore {
   pub tasks: HashMap<Uuid, Task>, // TODO: Make private
   tasks_path: PathBuf,
@@ -28,7 +30,7 @@ impl TaskStore {
       .open(&path)
       .expect("Couldn't access tasks.bin");
 
-    let lock = Lock::new(Path::new("tasks.pid")).unwrap();
+    let lock = Lock::new(Path::new(PID_FILE)).unwrap();
 
     let mut store = TaskStore {
       tasks: HashMap::new(),
@@ -75,6 +77,7 @@ impl Drop for TaskStore {
     let mut writer = BufWriter::new(file);
 
     encode_into(&self.serialize(), &mut writer, bincode::SizeLimit::Infinite).unwrap();
+    fs::remove_file(PID_FILE).unwrap();
   }
 }
 
