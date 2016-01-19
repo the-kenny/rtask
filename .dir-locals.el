@@ -1,5 +1,5 @@
 ;;; Directory Local Variables
 ;;; For more information see (info "(emacs) Directory Variables")
 
-((rust-mode
+((nil
   (compile-command . "cargo test")))
