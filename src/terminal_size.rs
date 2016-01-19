@@ -47,6 +47,7 @@ fn terminal_size_internal() -> io::Result<TerminalSize> {
 }
 
 #[test]
+#[ignore]
 fn test_terminal_size() {
   let ts = terminal_size_internal().unwrap();
   assert!(0 != ts.columns);
