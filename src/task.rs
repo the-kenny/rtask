@@ -8,13 +8,13 @@ pub type Time = time::Timespec;
 pub type Uuid = uuid::Uuid;
 pub type Tags = HashSet<String>;
 
-#[derive(RustcEncodable, RustcDecodable, Clone, Debug, PartialEq)]
+#[derive(RustcEncodable, RustcDecodable, Clone, Debug, PartialEq, Eq)]
 pub enum TaskState {
   Open,
   Done(Time)
 }
 
-#[derive(RustcEncodable, RustcDecodable, Clone, Debug, PartialEq)]
+#[derive(RustcEncodable, RustcDecodable, Clone, Debug, PartialEq, Eq)]
 pub struct Task {
   pub description: Title,
   pub status: TaskState,
@@ -55,6 +55,13 @@ impl Task {
       Open => self.status = Done(time::get_time()),
       _ => ()
     }
+  }
+}
+
+use std::cmp;
+impl cmp::PartialOrd for Task {
+  fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
+    self.urgency().partial_cmp(&other.urgency())
   }
 }
 
