@@ -11,7 +11,7 @@ use std::io::ErrorKind;
 fn main() {
   chdir();
   
-  let store = TaskStore::new();
+  let mut store = TaskStore::new();
 
   if let Some(command) = Command::from_args() {
     match command {
@@ -20,7 +20,12 @@ fn main() {
           println!("task (urgency: {}): {}", task.urgency(), task.description);
         }        
       },
-      Command::Show(_) => unimplemented!()
+      Command::Add(ref s) => {
+        let task: Task = Task::new(s);
+        store.tasks.insert(task.uuid, task.clone());
+        println!("Added task '{}'", task.description);
+      },
+      Command::Show(_) => unimplemented!(),
     }
   } else {
     panic!("Invalid command :-(")

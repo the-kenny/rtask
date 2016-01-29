@@ -5,6 +5,7 @@ use std::env;
 pub enum Command {
   List,
   Show(Uuid),
+  Add(String),
 }
 
 impl Command {
@@ -14,7 +15,7 @@ impl Command {
   }
 
   fn from_vec(args: &Vec<String>) -> Option<Self> {
-    if args.len() == 0 { return None };
+    if args.len() == 0 { return Some(Command::List) };
 
     // TODO: Simplify when slice_patterns get merged
     match args[0].as_ref() {
@@ -25,7 +26,15 @@ impl Command {
         if let Ok(uuid) = Uuid::parse_str(&args[1]) {
           Some(Command::Show(uuid))
         } else { None }
-      }
+      },
+      "add" => {
+        let params = args
+          .iter()
+          .skip(1)
+          .fold(String::new(), |acc, arg| acc + " " + arg);
+
+        Some(Command::Add(params.trim().to_string()))
+      },
       _ => None
     }
   }
@@ -52,4 +61,20 @@ fn test_show() {
 
   let c = Command::from_vec(&vec!["show".to_string(), "asdfsafd".to_string()]);
   assert_eq!(c, None);
+}
+
+
+#[test]
+fn test_add() {
+  let c = Command::from_vec(&vec!["add".to_string(), "foo".to_string()]);
+  assert_eq!(c, Some(Command::Add("foo".to_string())));
+
+  let c = Command::from_vec(&vec!["add".to_string(), "foo".to_string(), "bar".to_string()]);
+  assert_eq!(c, Some(Command::Add("foo bar".to_string())));
+}
+
+#[test]
+fn test_default() {
+  let c = Command::from_vec(&vec![]);
+  assert_eq!(c, Some(Command::List));
 }

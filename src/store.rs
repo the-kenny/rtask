@@ -13,6 +13,7 @@ const PID_FILE: &'static str = "tasks.pid";
 
 pub struct TaskStore {
   pub tasks: HashMap<Uuid, Task>, // TODO: Make private
+
   tasks_path: PathBuf,
   _file_lock: Lock,
 }
