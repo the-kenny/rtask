@@ -76,7 +76,7 @@ fn test_creation() {
 
 #[test]
 fn test_urgency() {
-  let mut t = Task::new("old");
+  let t = Task::new("old");
   let mut t2 = t.clone();
   assert_eq!(t.urgency(), t2.urgency());
   // Check if urgency increases when a job gets older
