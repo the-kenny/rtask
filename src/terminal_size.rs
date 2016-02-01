@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::io;
 use libc;
 use libc::c_ushort;
@@ -7,14 +9,14 @@ pub struct TerminalSize {
   rows: u16,
 }
 
+pub fn terminal_size() -> TerminalSize {
+  terminal_size_internal().unwrap_or(DEFAULT_SIZE)
+}
+
 const DEFAULT_SIZE: TerminalSize = TerminalSize {
   columns: 80,
   rows: 24
 };
-
-pub fn terminal_size() -> TerminalSize {
-  terminal_size_internal().unwrap_or(DEFAULT_SIZE)
-}
 
 // Ugly implementation details
 
