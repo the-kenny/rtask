@@ -86,6 +86,21 @@ fn test_add() {
 }
 
 #[test]
+fn test_tag_semantics() {
+  let params = vec!["add".to_string(),
+                    "tag:foo".to_string(),
+                    "my title containing tag:42".to_string(),
+                    "t:42 foo".to_string()];
+  if let Command::Add(title, tags) = Command::from_vec(&params).unwrap() {
+    assert_eq!(title, "my title containing tag:42");
+    assert!(tags.contains("42 foo"));
+    assert!(tags.contains("foo"));
+  } else {
+    panic!("Test Failed");
+  }
+}
+
+#[test]
 fn test_default() {
   let c = Command::from_vec(&vec![]);
   assert_eq!(c, Some(Command::List));
