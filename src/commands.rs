@@ -1,11 +1,13 @@
-use ::task::Uuid;
+use ::task::*;
 use std::env;
+
+use std::iter::FromIterator;
 
 #[derive(PartialEq, Eq, Debug)]
 pub enum Command {
   List,
   Show(Uuid),
-  Add(String),
+  Add(Title, Tags),
 }
 
 impl Command {
@@ -28,12 +30,22 @@ impl Command {
         } else { None }
       },
       "add" => {
-        let params = args
-          .iter()
-          .skip(1)
+        let params = args.iter().skip(1);
+
+        let tags: Tags = Tags::from_iter(
+          params.clone()
+            .into_iter()
+            .filter(|s| s.is_tag())
+            .flat_map(|s| s.as_tag()));
+        
+        let title = params
+          .filter(|p| !p.is_tag())
           .fold(String::new(), |acc, arg| acc + " " + arg);
 
-        Some(Command::Add(params.trim().to_string()))
+        println!("title: {:?}", title.trim());
+        println!("tags: {:?}", tags);
+
+        Some(Command::Add(title.trim().to_string(), tags))
       },
       _ => None
     }
@@ -46,7 +58,7 @@ fn test_list() {
   assert_eq!(c, Some(Command::List));
 
   let c = Command::from_vec(&vec!["list".to_string(),
-                                   "unimplemented_filter".to_string()]);
+                                  "unimplemented_filter".to_string()]);
   assert_eq!(c, None);
 }
 
@@ -67,10 +79,10 @@ fn test_show() {
 #[test]
 fn test_add() {
   let c = Command::from_vec(&vec!["add".to_string(), "foo".to_string()]);
-  assert_eq!(c, Some(Command::Add("foo".to_string())));
+  assert_eq!(c, Some(Command::Add("foo".to_string(), Tags::new())));
 
   let c = Command::from_vec(&vec!["add".to_string(), "foo".to_string(), "bar".to_string()]);
-  assert_eq!(c, Some(Command::Add("foo bar".to_string())));
+  assert_eq!(c, Some(Command::Add("foo bar".to_string(), Tags::new())));
 }
 
 #[test]

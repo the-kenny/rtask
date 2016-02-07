@@ -20,8 +20,8 @@ fn main() {
           println!("task (urgency: {}): {}", task.urgency(), task.description);
         }        
       },
-      Command::Add(ref s) => {
-        let task: Task = Task::new(s);
+      Command::Add(title, tags) => {
+        let task: Task = Task::new_with_tags(&title, tags);
         store.tasks.insert(task.uuid, task.clone());
         println!("Added task '{}'", task.description);
       },

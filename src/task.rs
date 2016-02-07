@@ -6,7 +6,8 @@ use std::collections::{HashSet};
 pub type Title = String;
 pub type Time = time::Timespec;
 pub type Uuid = uuid::Uuid;
-pub type Tags = HashSet<String>;
+pub type Tag = String;
+pub type Tags = HashSet<Tag>;
 
 #[derive(RustcEncodable, RustcDecodable, Clone, Debug, PartialEq, Eq)]
 pub enum TaskState {
@@ -34,6 +35,18 @@ impl Task {
       modified: now,
       uuid: Uuid::new_v4(),
       tags: Tags::new(),
+    }
+  }
+
+  pub fn new_with_tags(description: &str, tags: Tags) -> Self {
+    let now = time::get_time();
+    Task {
+      description: description.to_string(),
+      status: TaskState::Open,
+      created: now,
+      modified: now,
+      uuid: Uuid::new_v4(),
+      tags: tags,
     }
   }
 
@@ -72,6 +85,13 @@ fn test_creation() {
   assert_eq!(t.status, TaskState::Open);
   assert_eq!(t.tags, Tags::new());
   assert_eq!(false, t.uuid.is_nil());
+
+  let mut tags = Tags::new();
+  tags.insert("some-tag".to_string());
+  let t = Task::new_with_tags("foo", tags.clone());
+  assert_eq!(&t.description, "foo");
+  assert_eq!(t.tags, tags);
+
 }
 
 #[test]
@@ -93,5 +113,32 @@ fn test_mark_done() {
   match t.status {
     Done(_) => (),
     _ => panic!("Task::mark_done() failed"),
+  }
+}
+
+const TAG_PREFIXES: &'static [ &'static str ] = &[ "t:", "tag:" ];
+
+pub trait StringExt {
+  fn is_tag(&self) -> bool;
+  fn as_tag(&self) -> Option<Tag>;
+}
+
+impl StringExt for String {
+  fn is_tag(&self) -> bool { TAG_PREFIXES.iter().any(|prefix| self.starts_with(prefix)) }
+  fn as_tag(&self) -> Option<Tag> {
+    if let Some(prefix) = TAG_PREFIXES.iter().find(|prefix| self.starts_with(&prefix[..])) {
+      Some((self[prefix.len()..]).to_string())
+    } else { None }
+  }
+}
+
+#[test]
+fn test_is_tag_string() {
+  let x = vec!["t:foo".to_string(),
+               "tag:foo".to_string()];
+  
+  for t in x {
+    assert_eq!(true, t.is_tag());
+    assert_eq!(Some("foo".to_string()), t.as_tag());
   }
 }
