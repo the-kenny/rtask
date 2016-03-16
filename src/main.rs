@@ -17,7 +17,7 @@ fn main() {
     match command {
       Command::List => {
         for (_, ref task) in &store.tasks {
-          println!("task (urgency: {}): {}", task.urgency(), task.description);
+          println!("{:<60} u:{:<3} id:{}", task.description, task.urgency(), task.uuid);
         }        
       },
       Command::Add(title, tags) => {
