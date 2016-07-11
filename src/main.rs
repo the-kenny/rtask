@@ -25,7 +25,7 @@ fn main() {
       },
       Command::Add(title, tags) => {
         let task: Task = Task::new_with_tags(&title, tags);
-        store.tasks.insert(task.uuid, task.clone());
+        store.add_task(&task);
         println!("Added task '{}'", task.description);
       },
       Command::Show(_) => unimplemented!(),

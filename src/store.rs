@@ -23,6 +23,10 @@ impl TaskStore {
     Self::load_from("tasks.bin")
   }
 
+  pub fn add_task(&mut self, t: &Task) -> () {
+    self.tasks.insert(t.uuid, t.clone());
+  }
+
   fn load_from<P: AsRef<Path>>(path: P) -> Self {
     let mut file = fs::OpenOptions::new()
       .read(true)
@@ -51,7 +55,9 @@ impl TaskStore {
   }
 
   fn deserialize(&mut self, store: DiskStore) {
-    if store.version != 0 { panic!("Can't handle data with version {}", store.version) }
+    if store.version != 0 {
+      panic!("Can't handle data with version {}", store.version)
+    }
 
     self.tasks.clear();
 
@@ -76,6 +82,8 @@ impl Drop for TaskStore {
       .create(true)
       .open(&self.tasks_path).unwrap();
     let mut writer = BufWriter::new(file);
+
+    info!("Dropping TaskStore, serializing jobs to disk");
 
     encode_into(&self.serialize(), &mut writer, bincode::SizeLimit::Infinite).unwrap();
     fs::remove_file(PID_FILE).unwrap();
