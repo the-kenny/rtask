@@ -12,7 +12,7 @@ use std::collections::{HashMap};
 const PID_FILE: &'static str = "tasks.pid";
 
 pub struct TaskStore {
-  pub tasks: HashMap<Uuid, Task>, // TODO: Make private
+  tasks: HashMap<Uuid, Task>,
 
   tasks_path: PathBuf,
   _file_lock: Lock,
@@ -24,7 +24,10 @@ impl TaskStore {
   }
 
   pub fn add_task(&mut self, t: &Task) -> () {
-    self.tasks.insert(t.uuid, t.clone());
+    let res = self.tasks.insert(t.uuid, t.clone());
+    if res != None {
+      panic!("UUID collision in TaskStore::add_task");
+    }
   }
 
   fn load_from<P: AsRef<Path>>(path: P) -> Self {
