@@ -8,6 +8,7 @@ bincode = "*"
 rustc-serialize = "*"
 uuid = "*"
 libc = "*"
+log = "*"
 
 [dependencies.time]
 version = "*"

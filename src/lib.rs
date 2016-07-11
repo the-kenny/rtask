@@ -3,6 +3,7 @@ extern crate libc;
 extern crate rustc_serialize;
 extern crate time;
 extern crate uuid;
+#[macro_use] extern crate log;
 
 pub mod commands;
 pub mod task;
