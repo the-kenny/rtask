@@ -34,7 +34,7 @@ fn main() {
 
 fn chdir() {
   let mut dir = env::home_dir().expect("Couldn't get home dir");
-  dir.push(".rtasks");
+  dir.push(".rtasks/");
   
   match fs::create_dir(&dir) {
     Err(ref err) if err.kind() == ErrorKind::AlreadyExists => (),

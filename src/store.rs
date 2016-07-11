@@ -44,7 +44,7 @@ impl TaskStore {
     if meta.len() > 0 {
       let disk_store: DiskStore = decode_from(&mut file, bincode::SizeLimit::Infinite).unwrap();
       store.deserialize(disk_store);
-      println!("Loaded {} tasks from disk", store.tasks.len());
+      info!("Loaded {} tasks from disk", store.tasks.len());
     }
 
     store

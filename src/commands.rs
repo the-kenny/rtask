@@ -42,8 +42,7 @@ impl Command {
           .filter(|p| !p.is_tag())
           .fold(String::new(), |acc, arg| acc + " " + arg);
 
-        println!("title: {:?}", title.trim());
-        println!("tags: {:?}", tags);
+        info!("title: {:?}, tags: {:?}", title, tags);
 
         Some(Command::Add(title.trim().to_string(), tags))
       },
