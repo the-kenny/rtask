@@ -121,6 +121,8 @@ const TAG_PREFIXES: &'static [ &'static str ] = &[ "t:", "tag:" ];
 pub trait StringExt {
   fn is_tag(&self) -> bool;
   fn as_tag(&self) -> Option<Tag>;
+
+  fn ellipsize(&self, max_width: usize) -> String;
 }
 
 impl StringExt for String {
@@ -129,6 +131,18 @@ impl StringExt for String {
     if let Some(prefix) = TAG_PREFIXES.iter().find(|prefix| self.starts_with(&prefix[..])) {
       Some((self[prefix.len()..]).to_string())
     } else { None }
+  }
+
+  fn ellipsize(&self, max_width: usize) -> String {
+    let ellipsis = "...";
+    let cut = max_width - (ellipsis.len());
+    if self.len() <= cut {
+      self.clone()
+    } else {
+      let mut s = self.trim_right()[0..cut].to_string();
+      s.push_str(ellipsis);
+      s
+    }
   }
 }
 
