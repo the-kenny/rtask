@@ -10,7 +10,7 @@ use std::fs;
 use std::io::ErrorKind;
 
 fn main() {
-  env_logger::init();
+  env_logger::init().unwrap();
 
   chdir();
 
