@@ -7,5 +7,7 @@ in rec {
     version = "1.2.3.4";
     src = ./.;
     buildInputs = with pkgs; [ rustc cargo ];
+
+    RUST_LOG="rtask=info";
   };
 } 

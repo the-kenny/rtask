@@ -9,6 +9,7 @@ rustc-serialize = "*"
 uuid = "*"
 libc = "*"
 log = "*"
+env_logger = "*"
 
 [dependencies.time]
 version = "*"
