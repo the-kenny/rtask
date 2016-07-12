@@ -14,6 +14,7 @@ const PID_FILE: &'static str = "tasks.pid";
 pub struct TaskStore {
   tasks: HashMap<Uuid, Task>,
 
+  is_dirty: bool,
   tasks_path: PathBuf,
   _file_lock: Lock,
 }
@@ -25,6 +26,8 @@ impl TaskStore {
 
   pub fn add_task(&mut self, t: &Task) -> () {
     let res = self.tasks.insert(t.uuid, t.clone());
+    self.is_dirty = true;
+
     if res != None {
       panic!("UUID collision in TaskStore::add_task");
     }
@@ -49,6 +52,8 @@ impl TaskStore {
     let mut store = TaskStore {
       tasks: HashMap::new(),
       tasks_path: path.as_ref().to_path_buf(),
+
+      is_dirty: false,
       _file_lock: lock
     };
 
@@ -92,9 +97,16 @@ impl Drop for TaskStore {
       .open(&self.tasks_path).unwrap();
     let mut writer = BufWriter::new(file);
 
-    info!("Dropping TaskStore, serializing jobs to disk");
-
-    encode_into(&self.serialize(), &mut writer, bincode::SizeLimit::Infinite).unwrap();
+    info!("Dropping TaskStore");
+    if self.is_dirty {
+      info!("Serializing jobs to disk");
+      let res = encode_into(&self.serialize(),
+                            &mut writer,
+                            bincode::SizeLimit::Infinite);
+      if res.is_err() {
+        error!("Failed to serialize TaskStore!");
+      }
+    }
     fs::remove_file(PID_FILE).unwrap();
   }
 }
@@ -116,7 +128,7 @@ fn test_serialization() {
   {
     let mut store = TaskStore::load_from(&tempfile);
     assert_eq!(0, store.tasks.len());
-    store.tasks.insert(task.uuid, task.clone());
+    store.add_task(&task.clone());
     assert_eq!(1, store.tasks.len());
     // store drops, gets serialized
   }
