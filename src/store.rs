@@ -30,6 +30,10 @@ impl TaskStore {
     }
   }
 
+  pub fn all_tasks<'a>(&'a self) -> Vec<&'a Task> {
+    self.tasks.values().collect()
+  }
+
   fn load_from<P: AsRef<Path>>(path: P) -> Self {
     let mut file = fs::OpenOptions::new()
       .read(true)

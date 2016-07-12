@@ -19,7 +19,7 @@ fn main() {
   if let Some(command) = Command::from_args() {
     match command {
       Command::List => {
-        for (_, ref task) in &store.tasks {
+        for task in store.all_tasks() {
           println!("{:<60} u:{:<3} id:{}", task.description.ellipsize(60), task.urgency(), task.uuid);
         }
       },
