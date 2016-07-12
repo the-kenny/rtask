@@ -4,6 +4,7 @@ extern crate env_logger;
 use rtask::task::*;
 use rtask::store::*;
 use rtask::commands::Command;
+use rtask::terminal_size::*;
 
 use std::env;
 use std::fs;
@@ -19,8 +20,13 @@ fn main() {
   if let Some(command) = Command::from_args() {
     match command {
       Command::List => {
+        let right_padding = 10;
+        let terminal_width = terminal_size().columns - right_padding;
         for task in store.all_tasks() {
-          println!("{:<60} u:{:<3} id:{}", task.description.ellipsize(60), task.urgency(), task.uuid);
+          println!("{d:<w$} u:{urgency:<3}",
+                   w=terminal_width,
+                   d=task.description.ellipsize(60),
+                   urgency=task.urgency());
         }
       },
       Command::Add(title, tags) => {

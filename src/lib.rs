@@ -10,4 +10,4 @@ pub mod task;
 pub mod store;
 
 mod file_lock;
-mod terminal_size;
+pub mod terminal_size;
