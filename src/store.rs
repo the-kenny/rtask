@@ -31,7 +31,9 @@ impl TaskStore {
   }
 
   pub fn all_tasks<'a>(&'a self) -> Vec<&'a Task> {
-    self.tasks.values().collect()
+    let mut v: Vec<&Task> = self.tasks.values().collect();
+    v.sort_by_key(|t| (t.urgency() * -1000.0) as i64);
+    v
   }
 
   fn load_from<P: AsRef<Path>>(path: P) -> Self {

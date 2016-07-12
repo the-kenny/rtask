@@ -71,6 +71,8 @@ impl Task {
   }
 }
 
+// TODO: Implement `Ord` on Task by using `urgency()` &
+// `created/odified`
 use std::cmp;
 impl cmp::PartialOrd for Task {
   fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
