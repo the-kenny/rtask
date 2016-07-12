@@ -5,8 +5,8 @@ use libc;
 use libc::c_ushort;
 
 pub struct TerminalSize {
-  columns: u16,
-  rows: u16,
+  pub columns: usize,
+  pub rows: usize,
 }
 
 pub fn terminal_size() -> TerminalSize {
@@ -39,11 +39,14 @@ fn terminal_size_internal() -> io::Result<TerminalSize> {
   };
   let ret = unsafe { libc::ioctl(libc::STDOUT_FILENO, TIOCGWINSZ, &w) };
   if ret == -1 {
-    Err(io::Error::last_os_error())
+    let last_err = io::Error::last_os_error();
+    warn!("Got OS Error: {:?}", last_err);
+    Err(last_err)
   } else {
+    info!("Got terminal size: {}x{}", w.ws_col, w.ws_row);
     Ok(TerminalSize {
-      columns: w.ws_col,
-      rows: w.ws_row,
+      columns: w.ws_col as usize,
+      rows: w.ws_row as usize,
     })
   }
 }
