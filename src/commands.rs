@@ -95,7 +95,7 @@ fn test_tag_semantics() {
     assert!(tags.contains("42 foo"));
     assert!(tags.contains("foo"));
   } else {
-    panic!("Test Failed");
+    assert!(false, "Command parsing failed");
   }
 }
 

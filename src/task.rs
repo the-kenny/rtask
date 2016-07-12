@@ -58,7 +58,7 @@ impl Task {
 
     // Add 0.01 for every day since creation
     urgency = urgency + (days as f32 / 100.0);
-    
+
     urgency
   }
 
@@ -114,7 +114,7 @@ fn test_mark_done() {
   t.mark_done();
   match t.status {
     Done(_) => (),
-    _ => panic!("Task::mark_done() failed"),
+    _ => assert!(false, "Task::mark_done() failed"),
   }
 }
 
@@ -152,7 +152,7 @@ impl StringExt for String {
 fn test_is_tag_string() {
   let x = vec!["t:foo".to_string(),
                "tag:foo".to_string()];
-  
+
   for t in x {
     assert_eq!(true, t.is_tag());
     assert_eq!(Some("foo".to_string()), t.as_tag());

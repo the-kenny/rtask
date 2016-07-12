@@ -47,7 +47,8 @@ impl TaskStore {
       .open(&path)
       .expect("Couldn't access tasks.bin");
 
-    let lock = Lock::new(Path::new(PID_FILE)).unwrap();
+    let lock = Lock::new(Path::new(PID_FILE))
+      .expect("Couldn't acquire lock");
 
     let mut store = TaskStore {
       tasks: HashMap::new(),
@@ -60,7 +61,9 @@ impl TaskStore {
     let meta: fs::Metadata = file.metadata().expect("Couldn't get file metadata");
 
     if meta.len() > 0 {
-      let disk_store: DiskStore = decode_from(&mut file, bincode::SizeLimit::Infinite).unwrap();
+      let disk_store: DiskStore = decode_from(&mut file,
+                                              bincode::SizeLimit::Infinite)
+        .unwrap();
       store.deserialize(disk_store);
       info!("Loaded {} tasks from disk", store.tasks.len());
     }
@@ -94,7 +97,8 @@ impl Drop for TaskStore {
       .read(true)
       .write(true)
       .create(true)
-      .open(&self.tasks_path).unwrap();
+      .open(&self.tasks_path)
+      .expect("Failed to open tasks-file for writing");
     let mut writer = BufWriter::new(file);
 
     info!("Dropping TaskStore");
