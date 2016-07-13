@@ -2,12 +2,13 @@ use bincode;
 use bincode::rustc_serialize::{decode_from, encode_into};
 use std::fs;
 use std::path::{Path,PathBuf};
-use std::io::{BufWriter};
 
 use ::task::{Task, Uuid};
 use ::file_lock::Lock;
 
 use std::collections::{HashMap};
+
+const CURRENT_VERSION: u32 = 1;
 
 const PID_FILE: &'static str = "tasks.pid";
 
@@ -61,31 +62,25 @@ impl TaskStore {
     let meta: fs::Metadata = file.metadata().expect("Couldn't get file metadata");
 
     if meta.len() > 0 {
-      let disk_store: DiskStore = decode_from(&mut file,
-                                              bincode::SizeLimit::Infinite)
-        .unwrap();
+      let disk_store = DiskStore::new_from(&mut file).unwrap();
       store.deserialize(disk_store);
       info!("Loaded {} tasks from disk", store.tasks.len());
+    } else {
+      // Nothing serialized yet.
+      store.is_dirty = true;
     }
 
     store
   }
 
   fn deserialize(&mut self, store: DiskStore) {
-    if store.version != 0 {
-      panic!("Can't handle data with version {}", store.version)
-    }
-
-    self.tasks.clear();
-
-    let tasks = store.tasks.into_iter().map(|t| (t.uuid, t));
-    self.tasks.extend(tasks);
+    use std::iter::FromIterator;
+    self.tasks = HashMap::from_iter(store.tasks.into_iter().map(|t| (t.uuid, t)));
   }
 
   fn serialize(&self) -> DiskStore {
     let tasks = self.tasks.clone();
     DiskStore {
-      version: 0,
       tasks: tasks.into_iter().map(|(_, task)| task).collect(),
     }
   }
@@ -93,25 +88,20 @@ impl TaskStore {
 
 impl Drop for TaskStore {
   fn drop(&mut self) {
-    let file = fs::OpenOptions::new()
+    let mut file = fs::OpenOptions::new()
       .read(true)
       .write(true)
       .create(true)
       .open(&self.tasks_path)
       .expect("Failed to open tasks-file for writing");
-    let mut writer = BufWriter::new(file);
 
     info!("Dropping TaskStore");
     if self.is_dirty {
       info!("Serializing jobs to disk");
-      let res = encode_into(&self.serialize(),
-                            &mut writer,
-                            bincode::SizeLimit::Infinite);
-      if res.is_err() {
-        error!("Failed to serialize TaskStore!");
-      }
+      self.serialize().write(&mut file).unwrap();
     }
-    fs::remove_file(PID_FILE).unwrap();
+    fs::remove_file(PID_FILE)
+      .expect("Failed to remove PID file");
   }
 }
 
@@ -149,6 +139,27 @@ fn test_serialization() {
 // On-Disk representation
 #[derive(RustcEncodable, RustcDecodable)]
 struct DiskStore {
-  version: u32,
   tasks: Vec<Task>,
+}
+
+use std::io::{Read,Write};
+use bincode::rustc_serialize::{EncodingResult,DecodingResult};
+
+impl DiskStore {
+  fn write<W: Write>(&self, writer: &mut W) -> EncodingResult<()> {
+    try!(encode_into(&CURRENT_VERSION, writer, bincode::SizeLimit::Infinite));
+    try!(encode_into(self, writer, bincode::SizeLimit::Infinite));
+    Ok(())
+  }
+
+  fn new_from<R: Read>(reader: &mut R) -> DecodingResult<Self> {
+    let version: u32 = try!(decode_from(reader, bincode::SizeLimit::Bounded(4)));
+    debug!("DiskStore.version {}", version);
+    if version != CURRENT_VERSION {
+      panic!("Incompatible on-disk version: {}", version);
+    }
+    
+    decode_from(reader, bincode::SizeLimit::Infinite)
+      
+  }
 }
