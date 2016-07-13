@@ -10,20 +10,21 @@ pub type Tag = String;
 pub type Tags = HashSet<Tag>;
 pub type ExtraMap = HashMap<ExtraData, String>;
 
-#[derive(RustcEncodable, RustcDecodable, Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq,
+         RustcEncodable, RustcDecodable)]
 pub enum TaskState {
   Open,
   Done(Time)
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq,
-         PartialOrd, Ord, Hash,
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash,
          RustcEncodable, RustcDecodable)]
 pub enum ExtraData {
   Notes = 1,
 }
 
-#[derive(RustcEncodable, RustcDecodable, Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq,
+         RustcEncodable, RustcDecodable)]
 pub struct Task {
   pub description: Title,
   pub status: TaskState,
@@ -31,7 +32,7 @@ pub struct Task {
   pub modified: Time,
   pub uuid: Uuid,
   pub tags: Tags,
-  pub extra: ExtraMap,
+  pub extras: ExtraMap,
 }
 
 impl Task {
@@ -44,7 +45,7 @@ impl Task {
       modified: now,
       uuid: Uuid::new_v4(),
       tags: Tags::new(),
-      extra: ExtraMap::new(),
+      extras: ExtraMap::new(),
     }
   }
 
@@ -57,7 +58,7 @@ impl Task {
       modified: now,
       uuid: Uuid::new_v4(),
       tags: tags,
-      extra: ExtraMap::new()
+      extras: ExtraMap::new()
     }
   }
 

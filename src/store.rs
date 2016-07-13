@@ -158,8 +158,11 @@ impl DiskStore {
     if version != CURRENT_VERSION {
       panic!("Incompatible on-disk version: {}", version);
     }
-    
-    decode_from(reader, bincode::SizeLimit::Infinite)
-      
+
+    let store: DiskStore = try!(decode_from(reader, bincode::SizeLimit::Infinite));
+    debug!("Got {} tasks in DiskStore", store.tasks.len());
+    for t in &store.tasks { debug!("{:?}", t); }
+
+    Ok(store)
   }
 }
