@@ -1,5 +1,6 @@
 use libc;
 
+use std::fmt::Debug;
 use std::path::Path;
 use std::io;
 use std::ffi::CString;
@@ -10,8 +11,9 @@ pub struct Lock {
 }
 
 impl Lock {
-  pub fn new<P: AsRef<Path>>(path: P) -> io::Result<Self> {
-    // TODO: Simplify path conversion if switching to nightly
+  pub fn new<P>(path: P) -> io::Result<Self>
+    where P: AsRef<Path> + Debug {
+    debug!("Acquiring Lock on {:?}", path);
     let path = CString::new(path.as_ref()
                             .as_os_str()
                             .to_os_string()
