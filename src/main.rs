@@ -1,4 +1,5 @@
 extern crate rtask;
+#[macro_use] extern crate log;
 extern crate env_logger;
 
 use rtask::task::*;
@@ -42,8 +43,18 @@ fn main() {
 }
 
 fn chdir() {
-  let mut dir = env::home_dir().expect("Couldn't get home dir");
-  dir.push(".rtasks/");
+  use std::env;
+  let dir = env::var("RTASK_DIRECTORY")
+    .map(Into::into)
+    .unwrap_or_else(|x| {
+      let mut dir = env::home_dir().expect("Couldn't get home dir");
+      dir.push(".rtasks/");
+      dir
+    })
+    .canonicalize()
+    .expect("Failed to get absolute path");
+
+  info!("Working directory: {}", dir.display());
 
   match fs::create_dir(&dir) {
     Err(ref err) if err.kind() == ErrorKind::AlreadyExists => (),
