@@ -132,14 +132,13 @@ fn test_mark_done() {
 
 const TAG_PREFIXES: &'static [ &'static str ] = &[ "t:", "tag:" ];
 
+use std::borrow::Cow;
 pub trait StringExt {
   fn is_tag(&self) -> bool;
   fn as_tag(&self) -> Option<Tag>;
 
   fn ellipsize<'a>(&'a self, max_width: usize) -> Cow<'a, str>;
 }
-
-use std::borrow::Cow;
 
 impl StringExt for String {
   fn is_tag(&self) -> bool { TAG_PREFIXES.iter().any(|prefix| self.starts_with(prefix)) }
