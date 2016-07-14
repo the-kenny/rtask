@@ -7,7 +7,6 @@ use rtask::store::*;
 use rtask::commands::Command;
 use rtask::terminal_size::*;
 
-use std::env;
 use std::fs;
 use std::io::ErrorKind;
 
@@ -46,7 +45,7 @@ fn chdir() {
   use std::env;
   let dir = env::var("RTASK_DIRECTORY")
     .map(Into::into)
-    .unwrap_or_else(|x| {
+    .unwrap_or_else(|_| {
       let mut dir = env::home_dir().expect("Couldn't get home dir");
       dir.push(".rtasks/");
       dir
