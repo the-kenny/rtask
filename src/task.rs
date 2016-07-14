@@ -136,8 +136,10 @@ pub trait StringExt {
   fn is_tag(&self) -> bool;
   fn as_tag(&self) -> Option<Tag>;
 
-  fn ellipsize(&self, max_width: usize) -> String;
+  fn ellipsize<'a>(&'a self, max_width: usize) -> Cow<'a, str>;
 }
+
+use std::borrow::Cow;
 
 impl StringExt for String {
   fn is_tag(&self) -> bool { TAG_PREFIXES.iter().any(|prefix| self.starts_with(prefix)) }
@@ -147,15 +149,15 @@ impl StringExt for String {
     } else { None }
   }
 
-  fn ellipsize(&self, max_width: usize) -> String {
+  fn ellipsize<'a>(&'a self, max_width: usize) -> Cow<'a, str> {
     let ellipsis = "...";
     let cut = max_width - (ellipsis.len());
     if self.len() <= cut {
-      self.clone()
+      self[..].into()
     } else {
       let mut s = self.trim_right()[0..cut].to_string();
       s.push_str(ellipsis);
-      s
+      s.into()
     }
   }
 }
