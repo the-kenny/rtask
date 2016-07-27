@@ -47,7 +47,7 @@ fn chdir() {
     .map(Into::into)
     .unwrap_or_else(|_| {
       let mut dir = env::home_dir().expect("Couldn't get home dir");
-      dir.push(".rtasks/");
+      dir.push(".rtask/");
       dir
     })
     .canonicalize()
@@ -58,7 +58,7 @@ fn chdir() {
   match fs::create_dir(&dir) {
     Err(ref err) if err.kind() == ErrorKind::AlreadyExists => (),
     Ok(_) => (),
-    Err(_) => panic!("Couldn't create ~/.rtasks"),
+    Err(e) => panic!("Couldn't create {}: {}", &dir.display(), e),
   }
 
   env::set_current_dir(&dir).expect("Couldn't chdir");
