@@ -140,7 +140,7 @@ pub trait StringExt {
   fn ellipsize<'a>(&'a self, max_width: usize) -> Cow<'a, str>;
 }
 
-impl StringExt for String {
+impl StringExt for str {
   fn is_tag(&self) -> bool { TAG_PREFIXES.iter().any(|prefix| self.starts_with(prefix)) }
   fn as_tag(&self) -> Option<Tag> {
     if let Some(prefix) = TAG_PREFIXES.iter().find(|prefix| self.starts_with(&prefix[..])) {

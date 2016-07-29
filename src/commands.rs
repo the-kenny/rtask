@@ -64,7 +64,7 @@ fn test_list() {
 #[test]
 fn test_show() {
   let uuid = Uuid::new_v4();
-  let c = Command::from_vec(&vec!["show".to_string(), uuid.to_hyphenated_string()]);
+  let c = Command::from_vec(&vec!["show".to_string(), uuid.hyphenated().to_string()]);
   assert_eq!(c, Some(Command::Show(uuid)));
 
   let c = Command::from_vec(&vec!["show".to_string()]);
