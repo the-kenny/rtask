@@ -2,8 +2,9 @@ extern crate rtask;
 #[macro_use] extern crate log;
 extern crate env_logger;
 
-use rtask::task::*;
 use rtask::store::*;
+use rtask::*;
+
 use rtask::commands::Command;
 use rtask::terminal_size::*;
 
@@ -16,13 +17,14 @@ fn main() {
   chdir();
 
   let mut store = TaskStore::new();
+  let mut model = &mut store.model;
 
   if let Some(command) = Command::from_args() {
     match command {
       Command::List => {
         let right_padding = 10;
         let terminal_width = terminal_size().columns - right_padding;
-        for task in store.all_tasks() {
+        for task in model.all_tasks() {
           println!("{d:<w$} u:{urgency:<3}",
                    w=terminal_width,
                    d=task.description.ellipsize(60),
@@ -31,8 +33,9 @@ fn main() {
       },
       Command::Add(title, tags) => {
         let task: Task = Task::new_with_tags(&title, tags);
-        store.add_task(&task);
-        println!("Added task '{}'", task.description);
+        let desc = task.description.clone();
+        model.apply_effect(Effect::AddTask(task));
+        println!("Added task '{}'", desc);
       },
       Command::Show(_) => unimplemented!(),
     }
@@ -49,8 +52,11 @@ fn chdir() {
       let mut dir = env::home_dir().expect("Couldn't get home dir");
       dir.push(".rtask/");
       dir
-    })
-    .canonicalize()
+    });
+  fs::create_dir_all(&dir)
+    .expect("Failed to create directory");
+  
+  let dir = dir.canonicalize()
     .expect("Failed to get absolute path");
 
   info!("Working directory: {}", dir.display());

@@ -8,6 +8,10 @@ extern crate uuid;
 pub mod commands;
 pub mod task;
 pub mod store;
+pub mod model;
 
 mod file_lock;
 pub mod terminal_size;
+
+pub use task::*;
+pub use model::*;
