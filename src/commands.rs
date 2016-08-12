@@ -19,15 +19,13 @@ impl Command {
   fn from_vec(args: &Vec<String>) -> Option<Self> {
     if args.len() == 0 { return Some(Command::List) };
 
-    // TODO: Simplify when slice_patterns get merged
+    // TODO: Simplify when slice_patterns get stabilized
     match args[0].as_ref() {
       "list" => {
         if args.len() > 1 { None } else { Some(Command::List) }
       },
       "show" if args.len() == 2 => {
-        if let Ok(uuid) = Uuid::parse_str(&args[1]) {
-          Some(Command::Show(uuid))
-        } else { None }
+        Uuid::parse_str(&args[1]).ok().map(Command::Show)
       },
       "add" => {
         let params = args.iter().skip(1);
@@ -40,11 +38,17 @@ impl Command {
         
         let title = params
           .filter(|p| !p.is_tag())
-          .fold(String::new(), |acc, arg| acc + " " + arg);
+          .fold(String::new(), |acc, arg| acc + " " + arg)
+          .trim()
+          .to_string();
 
-        info!("title: {:?}, tags: {:?}", title, tags);
+        if title != "" {
+          info!("title: {:?}, tags: {:?}", title, tags);
 
-        Some(Command::Add(title.trim().to_string(), tags))
+          Some(Command::Add(title, tags))
+        } else {
+          None
+        }
       },
       _ => None
     }
