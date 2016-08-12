@@ -33,22 +33,22 @@ impl TaskStore {
     let lock = Lock::new(Path::new(PID_FILE))
       .expect("Couldn't acquire lock");
 
-    let mut store = TaskStore {
-      model: Model::new(),
+    let meta: fs::Metadata = file.metadata().expect("Couldn't get file metadata");
+    let model = if meta.len() > 0 {
+      let disk_store = DiskStore::new_from(&mut file).unwrap();
+      Model::from_effects(disk_store.effects)
+    } else {
+      Model::new()
+    };
+
+    info!("Loaded {} tasks from disk", model.tasks.len());
+
+    TaskStore {
+      model: model,
       effects_path: path.as_ref().to_path_buf(),
 
       _file_lock: lock
-    };
-
-    let meta: fs::Metadata = file.metadata().expect("Couldn't get file metadata");
-
-    if meta.len() > 0 {
-      let disk_store = DiskStore::new_from(&mut file).unwrap();
-      for effect in disk_store.effects { store.model.apply_effect(effect); }
-      info!("Loaded {} tasks from disk", store.model.tasks.len());
     }
-
-    store
   }
 
   fn serialize(&self) -> DiskStore {
@@ -68,8 +68,12 @@ impl Drop for TaskStore {
       .expect("Failed to open tasks-file for writing");
 
     info!("Dropping TaskStore");
-    info!("Serializing effects to disk");
-    self.serialize().write(&mut file).unwrap();
+    if self.model.is_dirty() {
+      info!("Serializing effects to disk");
+      self.serialize().write(&mut file).unwrap();
+    } else {
+      info!("Not serializing as nothing has changed")
+    }
 
     fs::remove_file(PID_FILE)
       .expect("Failed to remove PID file");

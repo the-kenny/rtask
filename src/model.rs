@@ -15,6 +15,8 @@ pub enum Effect {
 pub struct Model {
   pub tasks: HashMap<Uuid, Task>,
   pub applied_effects: Vec<Effect>,
+
+  is_dirty: bool,
 }
 
 impl Model {
@@ -22,19 +24,22 @@ impl Model {
     Model {
       tasks: HashMap::new(),
       applied_effects: Vec::new(),
+      is_dirty: false,
     }
   }
 
   pub fn from_effects(effects: Vec<Effect>) -> Self {
     let mut model = Self::new();
     for effect in effects { model.apply_effect(effect) }
+    model.is_dirty = false;
     model
   }
 
   pub fn apply_effect(&mut self, effect: Effect) -> () {
-    use Effect::*;
     self.applied_effects.push(effect.clone());
+    self.is_dirty = true;
 
+    use Effect::*;
     match effect {
       AddTask(task) => self.add_task(task),
     }
@@ -42,7 +47,7 @@ impl Model {
 
   fn add_task(&mut self, t: Task) -> () {
     if self.tasks.insert(t.uuid, t).is_some() {
-      panic!("UUID collision in TaskStore::add_task");
+      panic!("UUID collision in Model::add_task");
     }
   }
 
@@ -64,6 +69,10 @@ impl Model {
       1 => Ok(&self.tasks[uuids[0]]),
       _ => Err(MultipleResults),
     }
+  }
+
+  pub fn is_dirty(&self) -> bool {
+    self.is_dirty
   }
 }
 
