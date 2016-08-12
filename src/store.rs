@@ -23,15 +23,15 @@ impl TaskStore {
   }
 
   fn load_from<P: AsRef<Path>>(path: P) -> Self {
+    let lock = Lock::new(Path::new(PID_FILE))
+      .expect("Couldn't acquire lock");
+
     let mut file = fs::OpenOptions::new()
       .read(true)
       .write(true)
       .create(true)
       .open(&path)
       .expect("Couldn't access tasks.bin");
-
-    let lock = Lock::new(Path::new(PID_FILE))
-      .expect("Couldn't acquire lock");
 
     let meta: fs::Metadata = file.metadata().expect("Couldn't get file metadata");
     let model = if meta.len() > 0 {
