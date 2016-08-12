@@ -6,7 +6,7 @@ use std::iter::FromIterator;
 #[derive(PartialEq, Eq, Debug)]
 pub enum Command {
   List,
-  Show(Uuid),
+  Show(String),
   Add(Title, Tags),
 }
 
@@ -25,7 +25,7 @@ impl Command {
         if args.len() > 1 { None } else { Some(Command::List) }
       },
       "show" if args.len() == 2 => {
-        Uuid::parse_str(&args[1]).ok().map(Command::Show)
+        Some(Command::Show(args[1].clone()))
       },
       "add" => {
         let params = args.iter().skip(1);
@@ -67,15 +67,14 @@ fn test_list() {
 
 #[test]
 fn test_show() {
-  let uuid = Uuid::new_v4();
-  let c = Command::from_vec(&vec!["show".to_string(), uuid.hyphenated().to_string()]);
-  assert_eq!(c, Some(Command::Show(uuid)));
+  let c = Command::from_vec(&vec!["show".to_string(), "foo".to_string()]);
+  assert_eq!(c, Some(Command::Show("foo".to_string())));
 
   let c = Command::from_vec(&vec!["show".to_string()]);
   assert_eq!(c, None);
 
   let c = Command::from_vec(&vec!["show".to_string(), "asdfsafd".to_string()]);
-  assert_eq!(c, None);
+  assert_eq!(c, Some(Command::Show("asdfsafd".to_string())));
 }
 
 

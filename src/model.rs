@@ -52,4 +52,24 @@ impl Model {
     v.sort_by(|a,b| b.cmp(a));
     v
   }
+
+  pub fn find_task<'a>(&'a self, uuid_str: &str) -> Result<&'a Task, FindTaskError> {
+    let uuids = self.tasks.keys().filter(|uuid| {
+      uuid.simple().to_string().starts_with(uuid_str)
+    }).collect::<Vec<&Uuid>>();
+
+    use self::FindTaskError::*;
+    match uuids.len() {
+      0 => Err(TaskNotFound),
+      1 => Ok(&self.tasks[uuids[0]]),
+      _ => Err(MultipleResults),
+    }
+  }
 }
+
+#[derive(Debug,PartialEq,Eq)]
+pub enum FindTaskError {
+  TaskNotFound,
+  MultipleResults
+}
+

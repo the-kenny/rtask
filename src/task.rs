@@ -74,6 +74,12 @@ impl Task {
     urgency
   }
 
+  pub fn short_id(&self) -> String {
+    let mut s = self.uuid.simple().to_string();
+    s.truncate(6);
+    s
+  }
+
   pub fn mark_done(&mut self) {
     use self::TaskState::*;
     match self.status {

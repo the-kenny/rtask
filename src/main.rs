@@ -22,10 +22,12 @@ fn main() {
   if let Some(command) = Command::from_args() {
     match command {
       Command::List => {
-        let right_padding = 10;
+        // TODO: Calculate padding
+        let right_padding = 10 + 8;
         let terminal_width = terminal_size().columns - right_padding;
         for task in model.all_tasks() {
-          println!("{d:<w$} u:{urgency:<3}",
+          println!("{short} {d:<w$} u:{urgency:<3}",
+                   short=task.short_id(),
                    w=terminal_width,
                    d=task.description.ellipsize(60),
                    urgency=task.urgency());
@@ -37,7 +39,16 @@ fn main() {
         model.apply_effect(Effect::AddTask(task));
         println!("Added task '{}'", desc);
       },
-      Command::Show(_) => unimplemented!(),
+      Command::Show(s) => {
+        // TODO: Try to parse `s` as complete UUID and (later) as
+        // numerical short-id
+        use rtask::FindTaskError::*;
+        match model.find_task(&s) {
+          Ok(task) => println!("{:?}", task),
+          Err(TaskNotFound) => println!("No matching task found"),
+          Err(MultipleResults) => println!("Found multiple tasks matching {}", s),
+        }
+      }
     }
   } else {
     panic!("Invalid command :-(")
