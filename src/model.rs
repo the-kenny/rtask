@@ -49,7 +49,7 @@ impl Model {
   // TODO: Iterator
   pub fn all_tasks<'a>(&'a self) -> Vec<&'a Task> {
     let mut v: Vec<&Task> = self.tasks.values().collect();
-    v.sort_by_key(|t| (t.urgency() * -1000.0) as i64);
+    v.sort_by(|a,b| b.cmp(a));
     v
   }
 }

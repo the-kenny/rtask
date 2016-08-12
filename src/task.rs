@@ -83,12 +83,21 @@ impl Task {
   }
 }
 
-// TODO: Implement `Ord` on Task by using `urgency()` &
-// `created/odified`
 use std::cmp;
 impl cmp::PartialOrd for Task {
   fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
-    self.urgency().partial_cmp(&other.urgency())
+    Some(self.cmp(&other))
+  }
+}
+
+impl cmp::Ord for Task {
+  fn cmp(&self, other: &Self) -> cmp::Ordering {
+    let time_ord = other.created.cmp(&self.created);
+    match self.urgency().partial_cmp(&other.urgency()) {
+      None                       => time_ord,
+      Some(cmp::Ordering::Equal) => time_ord,
+      Some(v)                    => v,
+    }
   }
 }
 
