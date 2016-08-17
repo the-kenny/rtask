@@ -8,7 +8,7 @@ pub enum Effect {
   // ChangeTaskState(Uuid, TaskState),
   // AddTags(Uuid, Tags),
   // RemoveTags(Uuid, Tags),
-  // DeleteTask(Uuid),
+  DeleteTask(Uuid),
   // Undo,
 }
 
@@ -41,7 +41,8 @@ impl Model {
 
     use Effect::*;
     match effect {
-      AddTask(task) => self.add_task(task),
+      AddTask(task)    => { self.add_task(task); },
+      DeleteTask(uuid) => { self.delete_task(uuid); },
     }
   }
 
@@ -49,6 +50,10 @@ impl Model {
     if self.tasks.insert(t.uuid, t).is_some() {
       panic!("UUID collision in Model::add_task");
     }
+  }
+
+  fn delete_task(&mut self, u: Uuid) -> Option<Task> {
+    self.tasks.remove(&u)
   }
 
   // TODO: Iterator

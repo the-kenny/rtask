@@ -17,10 +17,12 @@ fn main() {
   chdir();
 
   let mut store = TaskStore::new();
-  let mut model = &mut store.model;
+  let model = &mut store.model;
 
   if let Some(command) = Command::from_args() {
-    match command {
+    use rtask::FindTaskError::*;
+
+    let effect = match command {
       Command::List => {
         // TODO: Calculate padding
         let right_padding = 10 + 8;
@@ -32,24 +34,44 @@ fn main() {
                    d=task.description.ellipsize(60),
                    urgency=task.urgency());
         }
-      },
-      Command::Add(title, tags) => {
-        let task: Task = Task::new_with_tags(&title, tags);
-        let desc = task.description.clone();
-        model.apply_effect(Effect::AddTask(task));
-        println!("Added task '{}'", desc);
+
+        None
       },
       Command::Show(s) => {
         // TODO: Try to parse `s` as complete UUID and (later) as
         // numerical short-id
-        use rtask::FindTaskError::*;
         match model.find_task(&s) {
           Ok(task) => println!("{:?}", task),
           Err(TaskNotFound) => println!("No matching task found"),
           Err(MultipleResults) => println!("Found multiple tasks matching {}", s),
         }
+
+        None
+      },
+      Command::Add(title, tags) => {
+        let task: Task = Task::new_with_tags(&title, tags);
+        println!("Adding task '{}'", task.description);
+        Some(Effect::AddTask(task))
+      },
+      Command::Delete(s) => {
+        match model.find_task(&s) {
+          Ok(task) => {
+            println!("Deleting task '{}'", task.description);
+            Some(Effect::DeleteTask(task.uuid.clone()))
+          },
+          Err(TaskNotFound) => {
+            println!("No matching task found");
+            None
+          },
+          Err(MultipleResults) => {
+            println!("Found multiple tasks matching {}", s);
+            None
+          }
+        }
       }
-    }
+    };
+
+    effect.map(|e| model.apply_effect(e));
   } else {
     panic!("Invalid command :-(")
   }
@@ -66,7 +88,7 @@ fn chdir() {
     });
   fs::create_dir_all(&dir)
     .expect("Failed to create directory");
-  
+
   let dir = dir.canonicalize()
     .expect("Failed to get absolute path");
 

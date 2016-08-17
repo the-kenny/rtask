@@ -1,6 +1,6 @@
 use ::task::*;
-use std::env;
 
+use std::env;
 use std::iter::FromIterator;
 
 #[derive(PartialEq, Eq, Debug)]
@@ -8,6 +8,7 @@ pub enum Command {
   List,
   Show(String),
   Add(Title, Tags),
+  Delete(String),
 }
 
 impl Command {
@@ -35,7 +36,7 @@ impl Command {
             .into_iter()
             .filter(|s| s.is_tag())
             .flat_map(|s| s.as_tag()));
-        
+
         let title = params
           .filter(|p| !p.is_tag())
           .fold(String::new(), |acc, arg| acc + " " + arg)
@@ -49,6 +50,9 @@ impl Command {
         } else {
           None
         }
+      },
+      "del" if args.len() == 2 => {
+        Some(Command::Delete(args[1].clone()))
       },
       _ => None
     }
