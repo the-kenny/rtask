@@ -9,5 +9,6 @@ in rec {
     buildInputs = with pkgs; [ rustc cargo ];
 
     RUST_LOG="rtask=info";
+    RTASK_DIRECTORY = ".";
   };
 } 
