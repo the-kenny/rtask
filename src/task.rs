@@ -50,16 +50,9 @@ impl Task {
   }
 
   pub fn new_with_tags(description: &str, tags: Tags) -> Self {
-    let now = time::get_time();
-    Task {
-      description: description.to_string(),
-      status: TaskState::Open,
-      created: now,
-      modified: now,
-      uuid: Uuid::new_v4(),
-      tags: tags,
-      extras: ExtraMap::new()
-    }
+    let mut t = Task::new(description);
+    t.tags = tags;
+    t
   }
 
   pub fn urgency(&self) -> f32 {
