@@ -59,55 +59,61 @@ impl Command {
   }
 }
 
-#[test]
-fn test_list() {
-  let c = Command::from_vec(&vec!["list".to_string()]);
-  assert_eq!(c, Some(Command::List));
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use ::task::*;
 
-  let c = Command::from_vec(&vec!["list".to_string(),
-                                  "unimplemented_filter".to_string()]);
-  assert_eq!(c, None);
-}
+  #[test]
+  fn test_list() {
+    let c = Command::from_vec(&vec!["list".to_string()]);
+    assert_eq!(c, Some(Command::List));
 
-#[test]
-fn test_show() {
-  let c = Command::from_vec(&vec!["show".to_string(), "foo".to_string()]);
-  assert_eq!(c, Some(Command::Show("foo".to_string())));
-
-  let c = Command::from_vec(&vec!["show".to_string()]);
-  assert_eq!(c, None);
-
-  let c = Command::from_vec(&vec!["show".to_string(), "asdfsafd".to_string()]);
-  assert_eq!(c, Some(Command::Show("asdfsafd".to_string())));
-}
-
-
-#[test]
-fn test_add() {
-  let c = Command::from_vec(&vec!["add".to_string(), "foo".to_string()]);
-  assert_eq!(c, Some(Command::Add("foo".to_string(), Tags::new())));
-
-  let c = Command::from_vec(&vec!["add".to_string(), "foo".to_string(), "bar".to_string()]);
-  assert_eq!(c, Some(Command::Add("foo bar".to_string(), Tags::new())));
-}
-
-#[test]
-fn test_tag_semantics() {
-  let params = vec!["add".to_string(),
-                    "tag:foo".to_string(),
-                    "my title containing tag:42".to_string(),
-                    "t:42 foo".to_string()];
-  if let Command::Add(title, tags) = Command::from_vec(&params).unwrap() {
-    assert_eq!(title, "my title containing tag:42");
-    assert!(tags.contains("42 foo"));
-    assert!(tags.contains("foo"));
-  } else {
-    assert!(false, "Command parsing failed");
+    let c = Command::from_vec(&vec!["list".to_string(),
+                                    "unimplemented_filter".to_string()]);
+    assert_eq!(c, None);
   }
-}
 
-#[test]
-fn test_default() {
-  let c = Command::from_vec(&vec![]);
-  assert_eq!(c, Some(Command::List));
+  #[test]
+  fn test_show() {
+    let c = Command::from_vec(&vec!["show".to_string(), "foo".to_string()]);
+    assert_eq!(c, Some(Command::Show("foo".to_string())));
+
+    let c = Command::from_vec(&vec!["show".to_string()]);
+    assert_eq!(c, None);
+
+    let c = Command::from_vec(&vec!["show".to_string(), "asdfsafd".to_string()]);
+    assert_eq!(c, Some(Command::Show("asdfsafd".to_string())));
+  }
+
+
+  #[test]
+  fn test_add() {
+    let c = Command::from_vec(&vec!["add".to_string(), "foo".to_string()]);
+    assert_eq!(c, Some(Command::Add("foo".to_string(), Tags::new())));
+
+    let c = Command::from_vec(&vec!["add".to_string(), "foo".to_string(), "bar".to_string()]);
+    assert_eq!(c, Some(Command::Add("foo bar".to_string(), Tags::new())));
+  }
+
+  #[test]
+  fn test_tag_semantics() {
+    let params = vec!["add".to_string(),
+                      "tag:foo".to_string(),
+                      "my title containing tag:42".to_string(),
+                      "t:42 foo".to_string()];
+    if let Command::Add(title, tags) = Command::from_vec(&params).unwrap() {
+      assert_eq!(title, "my title containing tag:42");
+      assert!(tags.contains("42 foo"));
+      assert!(tags.contains("foo"));
+    } else {
+      assert!(false, "Command parsing failed");
+    }
+  }
+
+  #[test]
+  fn test_default() {
+    let c = Command::from_vec(&vec![]);
+    assert_eq!(c, Some(Command::List));
+  }
 }

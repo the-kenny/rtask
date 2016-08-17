@@ -100,44 +100,6 @@ impl cmp::Ord for Task {
   }
 }
 
-#[test]
-fn test_creation() {
-  let t = Task::new("foo");
-  assert_eq!(&t.description, "foo");
-  assert_eq!(t.status, TaskState::Open);
-  assert_eq!(t.tags, Tags::new());
-  assert_eq!(false, t.uuid.is_nil());
-
-  let mut tags = Tags::new();
-  tags.insert("some-tag".to_string());
-  let t = Task::new_with_tags("foo", tags.clone());
-  assert_eq!(&t.description, "foo");
-  assert_eq!(t.tags, tags);
-
-}
-
-#[test]
-fn test_urgency() {
-  let t = Task::new("old");
-  let mut t2 = t.clone();
-  assert_eq!(t.urgency(), t2.urgency());
-  // Check if urgency increases when a job gets older
-  t2.created = t2.created - time::Duration::days(2);
-  assert!(t2.urgency() > t.urgency());
-}
-
-#[test]
-fn test_mark_done() {
-  use self::TaskState::*;
-  let mut t: Task = Task::new("foo");
-  assert_eq!(Open, t.status);
-  t.mark_done();
-  match t.status {
-    Done(_) => (),
-    _ => assert!(false, "Task::mark_done() failed"),
-  }
-}
-
 const TAG_PREFIXES: &'static [ &'static str ] = &[ "t:", "tag:" ];
 
 use std::borrow::Cow;
@@ -169,13 +131,59 @@ impl StringExt for str {
   }
 }
 
-#[test]
-fn test_is_tag_string() {
-  let x = vec!["t:foo".to_string(),
-               "tag:foo".to_string()];
 
-  for t in x {
-    assert_eq!(true, t.is_tag());
-    assert_eq!(Some("foo".to_string()), t.as_tag());
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn test_creation() {
+    let t = Task::new("foo");
+    assert_eq!(&t.description, "foo");
+    assert_eq!(t.status, TaskState::Open);
+    assert_eq!(t.tags, Tags::new());
+    assert_eq!(false, t.uuid.is_nil());
+
+    let mut tags = Tags::new();
+    tags.insert("some-tag".to_string());
+    let t = Task::new_with_tags("foo", tags.clone());
+    assert_eq!(&t.description, "foo");
+    assert_eq!(t.tags, tags);
+
+  }
+
+  #[test]
+  fn test_urgency() {
+    use time::Duration;
+
+    let t = Task::new("old");
+    let mut t2 = t.clone();
+    assert_eq!(t.urgency(), t2.urgency());
+    // Check if urgency increases when a job gets older
+    t2.created = t2.created - Duration::days(2);
+    assert!(t2.urgency() > t.urgency());
+  }
+
+  #[test]
+  fn test_mark_done() {
+    use TaskState::*;
+    let mut t: Task = Task::new("foo");
+    assert_eq!(Open, t.status);
+    t.mark_done();
+    match t.status {
+      Done(_) => (),
+      _ => assert!(false, "Task::mark_done() failed"),
+    }
+  }
+
+  #[test]
+  fn test_is_tag_string() {
+    let x = vec!["t:foo".to_string(),
+                 "tag:foo".to_string()];
+
+    for t in x {
+      assert_eq!(true, t.is_tag());
+      assert_eq!(Some("foo".to_string()), t.as_tag());
+    }
   }
 }

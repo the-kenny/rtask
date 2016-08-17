@@ -80,39 +80,6 @@ impl Drop for TaskStore {
   }
 }
 
-#[test]
-fn test_serialization() {
-  use std::{env, fs};
-  use std::io::ErrorKind;
-  use super::Task;
-
-  let mut tempfile = env::temp_dir();
-  tempfile.push("tasks.bin");
-  match fs::remove_file(&tempfile) {
-    Err(ref e) if e.kind() == ErrorKind::NotFound => (),
-    Err(_) => panic!("Couldn't remove stale file `{:?}`", tempfile),
-    _ => (),
-  }
-
-  let task = Task::new("task #1");
-  {
-    let mut store = TaskStore::load_from(&tempfile);
-    assert_eq!(0, store.model.tasks.len());
-    store.model.apply_effect(Effect::AddTask(task.clone()));
-    assert_eq!(1, store.model.tasks.len());
-    // store drops, gets serialized
-  }
-  {
-    // Load from file, check if everything is as we've left it
-    // TODO: Check for whole-model equality
-    let store = TaskStore::load_from(&tempfile);
-    assert_eq!(1, store.model.tasks.len());
-    assert_eq!(Some(&task), store.model.tasks.get(&task.uuid));
-  }
-
-  fs::remove_file(tempfile).unwrap();
-}
-
 // On-Disk representation
 #[derive(RustcEncodable, RustcDecodable)]
 struct DiskStore {
@@ -141,5 +108,43 @@ impl DiskStore {
     for t in &store.effects { debug!("{:?}", t); }
 
     Ok(store)
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use ::{Effect,Task};
+
+  #[test]
+  fn test_serialization() {
+    use std::{env, fs};
+    use std::io::ErrorKind;
+
+    let mut tempfile = env::temp_dir();
+    tempfile.push("tasks.bin");
+    match fs::remove_file(&tempfile) {
+      Err(ref e) if e.kind() == ErrorKind::NotFound => (),
+      Err(_) => panic!("Couldn't remove stale file `{:?}`", tempfile),
+      _ => (),
+    }
+
+    let task = Task::new("task #1");
+    {
+      let mut store = TaskStore::load_from(&tempfile);
+      assert_eq!(0, store.model.tasks.len());
+      store.model.apply_effect(Effect::AddTask(task.clone()));
+      assert_eq!(1, store.model.tasks.len());
+      // store drops, gets serialized
+    }
+    {
+      // Load from file, check if everything is as we've left it
+      // TODO: Check for whole-model equality
+      let store = TaskStore::load_from(&tempfile);
+      assert_eq!(1, store.model.tasks.len());
+      assert_eq!(Some(&task), store.model.tasks.get(&task.uuid));
+    }
+
+    fs::remove_file(tempfile).unwrap();
   }
 }
