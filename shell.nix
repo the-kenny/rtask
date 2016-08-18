@@ -10,5 +10,9 @@ in rec {
 
     RUST_LOG="rtask=info";
     RTASK_DIRECTORY = ".";
+
+    shellHook = ''
+      export PATH="target/debug/:$PATH";
+    '';
   };
 } 
