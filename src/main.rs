@@ -19,7 +19,14 @@ fn main() {
   let mut store = TaskStore::new();
   let model = &mut store.model;
 
-  if let Some(command) = Command::from_args() {
+  let command = Command::from_args();
+
+  if let Err(e) = command {
+    println!("Error while parsing command: {}", e.0);
+    return;
+  } else if let Ok(command) = command {
+    info!("Command: {:?}", command);
+
     use rtask::FindTaskError::*;
 
     let effect = match command {
@@ -37,13 +44,11 @@ fn main() {
 
         None
       },
-      Command::Show(s) => {
-        // TODO: Try to parse `s` as complete UUID and (later) as
-        // numerical short-id
-        match model.find_task(&s) {
+      Command::Show(r) => {
+        match model.find_task(&r) {
           Ok(task) => println!("{:?}", task),
-          Err(TaskNotFound) => println!("No matching task found"),
-          Err(MultipleResults) => println!("Found multiple tasks matching {}", s),
+          Err(TaskNotFound) => println!("Found no tasks matching {}", r),
+          Err(MultipleResults) => println!("Found multiple tasks matching {}", r),
         }
 
         None
@@ -53,8 +58,8 @@ fn main() {
         println!("Adding task '{}'", task.description);
         Some(Effect::AddTask(task))
       },
-      Command::Delete(s) => {
-        match model.find_task(&s) {
+      Command::Delete(r) => {
+        match model.find_task(&r) {
           Ok(task) => {
             println!("Deleting task '{}'", task.description);
             Some(Effect::DeleteTask(task.uuid.clone()))
@@ -64,7 +69,7 @@ fn main() {
             None
           },
           Err(MultipleResults) => {
-            println!("Found multiple tasks matching {}", s);
+            println!("Found multiple tasks matching {}", r);
             None
           }
         }

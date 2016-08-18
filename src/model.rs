@@ -63,10 +63,17 @@ impl Model {
     v
   }
 
-  pub fn find_task<'a>(&'a self, uuid_str: &str) -> Result<&'a Task, FindTaskError> {
-    let uuids = self.tasks.keys().filter(|uuid| {
-      uuid.simple().to_string().starts_with(uuid_str)
-    }).collect::<Vec<&Uuid>>();
+  pub fn find_task<'a>(&'a self, task_ref: &TaskRef) -> Result<&'a Task, FindTaskError> {
+    let uuids: Vec<&Uuid> = match *task_ref {
+      TaskRef::FullUUID(ref u) => {
+        vec![u]
+      },
+      TaskRef::ShortUUID(ref s) => {
+        self.tasks.keys().filter(|uuid| {
+          uuid.simple().to_string().starts_with(s)
+        }).collect()
+      }
+    };
 
     use self::FindTaskError::*;
     match uuids.len() {
@@ -87,3 +94,40 @@ pub enum FindTaskError {
   MultipleResults
 }
 
+#[derive(Debug, PartialEq, Eq)]
+pub enum TaskRef {
+  ShortUUID(String),
+  FullUUID(Uuid),
+  // Numerical(u64),
+}
+
+const SHORT_UUID_MIN_LEN: usize = 6;
+
+use std::fmt;
+use std::str::FromStr;
+
+impl FromStr for TaskRef {
+  type Err = TaskRefError;
+  fn from_str(s: &str) -> Result<TaskRef, TaskRefError> {
+    let uuid = Uuid::parse_str(s).ok().map(TaskRef::FullUUID);
+    let short = if s.len() >= SHORT_UUID_MIN_LEN {
+      Some(TaskRef::ShortUUID(s.into()))
+    } else {
+      None
+    };
+
+    uuid.or(short).map_or(Err(TaskRefError), Ok)
+  }
+}
+
+impl fmt::Display for TaskRef {
+  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    match *self {
+      TaskRef::ShortUUID(ref s) => f.write_str(s),
+      TaskRef::FullUUID(ref u) => f.write_str(&u.hyphenated().to_string()),
+    }
+  }
+}
+
+#[derive(Debug)]
+pub struct TaskRefError;
