@@ -42,8 +42,11 @@ impl SqliteStore {
   fn initialize_db(db: &mut Connection) {
     assert!(!Self::is_initialized(&db));
 
+    info!("Initializing SQL Store");
+
     let schema = include_str!("schema.sql");
-    for command in schema.split(";") {
+    let commands = schema.split(";").map(str::trim).filter(|s| !s.is_empty());
+    for command in commands {
       debug!("Executing SQL: {:?}", command);
       db.execute(&format!("{};", command), &[]).unwrap();
     }
@@ -104,7 +107,7 @@ impl StoreEngine for SqliteStore {
 impl Drop for SqliteStore {
   fn drop(&mut self) {
     if !self.model.is_dirty() {
-      debug!("Not serializing as model isn't dirty");
+      info!("Not serializing as model isn't dirty");
       return
     }
 
