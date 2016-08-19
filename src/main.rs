@@ -16,8 +16,8 @@ fn main() {
 
   chdir();
 
-  let mut store = TaskStore::new();
-  let model = &mut store.model;
+  let mut store = TaskStore::new().expect("Failed to open store");
+  let model = store.model();
 
   let command = Command::from_args();
 

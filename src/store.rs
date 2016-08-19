@@ -10,18 +10,32 @@ use ::file_lock::Lock;
 const CURRENT_VERSION: u32 = 1;
 const PID_FILE: &'static str = "tasks.pid";
 
+pub trait StoreEngine: Sized {
+  type LoadErr;
+  // fn load_from<P: AsRef<Path>>(dir: P) -> Result<Self, Self::LoadErr>;
+  fn new() -> Result<Self, Self::LoadErr>;
+  fn model<'a>(&'a mut self) -> &'a mut Model;
+}
+
 pub struct TaskStore {
-  pub model: Model,
+  model: Model,
 
   effects_path: PathBuf,
   _file_lock: Lock,
 }
 
-impl TaskStore {
-  pub fn new() -> Self {
-    Self::load_from("effects.bin")
+impl StoreEngine for TaskStore {
+  type LoadErr = ();
+  fn new() -> Result<Self, Self::LoadErr> {
+    Ok(Self::load_from("effects.bin"))
   }
+  
+  fn model<'a>(&'a mut self) -> &'a mut Model {
+    &mut self.model
+  }
+}
 
+impl TaskStore {
   fn load_from<P: AsRef<Path>>(path: P) -> Self {
     let lock = Lock::new(Path::new(PID_FILE))
       .expect("Couldn't acquire lock");
