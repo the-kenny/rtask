@@ -10,7 +10,7 @@ use ::file_lock::Lock;
 const CURRENT_VERSION: u32 = 1;
 const PID_FILE: &'static str = "tasks.pid";
 
-pub trait StoreEngine: Sized {
+pub trait StoreEngine: Sized + Drop {
   type LoadErr;
   // fn load_from<P: AsRef<Path>>(dir: P) -> Result<Self, Self::LoadErr>;
   fn new() -> Result<Self, Self::LoadErr>;
