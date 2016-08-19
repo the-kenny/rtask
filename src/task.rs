@@ -10,7 +10,7 @@ pub type Tag = String;
 pub type Tags = HashSet<Tag>;
 pub type ExtraMap = HashMap<ExtraData, String>;
 
-#[derive(Clone, Debug, PartialEq, Eq,
+#[derive(Clone, Copy, Debug, PartialEq, Eq,
          RustcEncodable, RustcDecodable)]
 pub enum TaskState {
   Open,
@@ -73,13 +73,13 @@ impl Task {
     s
   }
 
-  pub fn mark_done(&mut self) {
-    use self::TaskState::*;
-    match self.status {
-      Open => self.status = Done(time::get_time()),
-      _ => ()
-    }
-  }
+  // pub fn mark_done(&mut self) {
+  //   use self::TaskState::*;
+  //   match self.status {
+  //     Open => self.status = Done(time::get_time()),
+  //     _ => ()
+  //   }
+  // }
 }
 
 use std::cmp;
@@ -164,17 +164,17 @@ mod tests {
     assert!(t2.urgency() > t.urgency());
   }
 
-  #[test]
-  fn test_mark_done() {
-    use TaskState::*;
-    let mut t: Task = Task::new("foo");
-    assert_eq!(Open, t.status);
-    t.mark_done();
-    match t.status {
-      Done(_) => (),
-      _ => assert!(false, "Task::mark_done() failed"),
-    }
-  }
+  // #[test]
+  // fn test_mark_done() {
+  //   use TaskState::*;
+  //   let mut t: Task = Task::new("foo");
+  //   assert_eq!(Open, t.status);
+  //   t.mark_done();
+  //   match t.status {
+  //     Done(_) => (),
+  //     _ => assert!(false, "Task::mark_done() failed"),
+  //   }
+  // }
 
   #[test]
   fn test_is_tag_string() {

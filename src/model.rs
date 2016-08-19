@@ -5,7 +5,7 @@ use std::collections::HashMap;
          RustcEncodable, RustcDecodable)]
 pub enum Effect {
   AddTask(Task),
-  // ChangeTaskState(Uuid, TaskState),
+  ChangeTaskState(Uuid, TaskState),
   // AddTags(Uuid, Tags),
   // RemoveTags(Uuid, Tags),
   DeleteTask(Uuid),
@@ -36,14 +36,15 @@ impl Model {
   }
 
   pub fn apply_effect(&mut self, effect: Effect) -> () {
-    self.applied_effects.push(effect.clone());
-    self.is_dirty = true;
-
     use Effect::*;
-    match effect {
-      AddTask(task)    => { self.add_task(task); },
-      DeleteTask(uuid) => { self.delete_task(uuid); },
+    match effect.clone() {
+      AddTask(task)                => { self.add_task(task); },
+      DeleteTask(uuid)             => { self.delete_task(&uuid); },
+      ChangeTaskState(uuid, state) => { self.change_task_state(&uuid, state); }
     }
+
+    self.applied_effects.push(effect);
+    self.is_dirty = true;
   }
 
   fn add_task(&mut self, t: Task) -> () {
@@ -52,8 +53,14 @@ impl Model {
     }
   }
 
-  fn delete_task(&mut self, u: Uuid) -> Option<Task> {
+  fn delete_task(&mut self, u: &Uuid) -> Option<Task> {
     self.tasks.remove(&u)
+  }
+
+  fn change_task_state(&mut self, u: &Uuid, state: TaskState) {
+    self.tasks.get_mut(u)
+      .expect("failed to get task")
+      .status = state;
   }
 
   // TODO: Iterator
@@ -78,7 +85,7 @@ impl Model {
     use self::FindTaskError::*;
     match uuids.len() {
       0 => Err(TaskNotFound),
-      1 => Ok(&self.tasks[uuids[0]]),
+      1 => self.tasks.get(uuids[0]).map_or(Err(FindTaskError::TaskNotFound), Ok),
       _ => Err(MultipleResults),
     }
   }
@@ -94,12 +101,16 @@ pub enum FindTaskError {
   MultipleResults
 }
 
+// TODO: Use references instead of ownership
 #[derive(Debug, PartialEq, Eq)]
 pub enum TaskRef {
   ShortUUID(String),
   FullUUID(Uuid),
   // Numerical(u64),
 }
+
+#[derive(Debug)]
+pub struct TaskRefError;
 
 const SHORT_UUID_MIN_LEN: usize = 6;
 
@@ -120,6 +131,12 @@ impl FromStr for TaskRef {
   }
 }
 
+impl From<Uuid> for TaskRef {
+  fn from(u: Uuid) -> Self {
+    TaskRef::FullUUID(u)
+  }
+}
+
 impl fmt::Display for TaskRef {
   fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
     match *self {
@@ -129,5 +146,32 @@ impl fmt::Display for TaskRef {
   }
 }
 
-#[derive(Debug)]
-pub struct TaskRefError;
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use ::{Task, TaskState};
+  use time;
+  
+  #[test]
+  fn test_add_delete_task() {
+    let mut m = Model::new();
+    let t = Task::new("foo");
+    let tref: TaskRef = t.uuid.clone().into();
+    m.add_task(t.clone());
+    assert_eq!(m.find_task(&tref), Ok(&t));
+    assert_eq!(m.delete_task(&t.uuid), Some(t));
+    assert_eq!(m.find_task(&tref), Err(FindTaskError::TaskNotFound));
+  }
+
+    #[test]
+  fn test_change_task_task() {
+    let mut m = Model::new();
+    let t = Task::new("foo");
+    let uuid = t.uuid.clone();
+    m.add_task(t.clone());
+    assert_eq!(m.tasks[&uuid].status, TaskState::Open);
+    let s = TaskState::Done(time::get_time());
+    m.change_task_state(&uuid, s);
+    assert_eq!(m.tasks[&uuid].status, s);
+  }
+}

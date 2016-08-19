@@ -9,7 +9,7 @@ in rec {
     buildInputs = with pkgs; [ rustc cargo ];
 
     RUST_LOG="rtask=info";
-    RTASK_DIRECTORY = ".";
+    RTASK_DIRECTORY = "./store/";
 
     shellHook = ''
       export PATH="target/debug/:$PATH";
