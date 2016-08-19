@@ -3,6 +3,10 @@ use bincode::rustc_serialize::{decode_from, encode_into};
 use std::fs;
 use std::path::{Path,PathBuf};
 
+use rusqlite::Connection;
+
+use rustc_serialize::json;
+
 use super::{ Model, Effect };
 
 use ::file_lock::Lock;
@@ -17,9 +21,110 @@ pub trait StoreEngine: Sized + Drop {
   fn model<'a>(&'a mut self) -> &'a mut Model;
 }
 
-pub struct TrivialStore {
+// Sqlite
+
+pub struct SqliteStore {
   model: Model,
 
+  db: Connection,
+  _file_lock: Lock,
+}
+
+impl SqliteStore {
+  fn is_initialized(db: &Connection) -> bool {
+    db.query_row("SELECT * FROM sqlite_master 
+                  WHERE name = 'effects' 
+                  AND   type = 'table'",
+                 &[], |_| 0)
+      .is_ok()
+  }
+  
+  fn initialize_db(db: &mut Connection) {
+    assert!(!Self::is_initialized(&db));
+
+    let schema = include_str!("schema.sql");
+    for command in schema.split(";") {
+      debug!("Executing SQL: {:?}", command);
+      db.execute(&format!("{};", command), &[]).unwrap();
+    }
+  }
+
+  // TODO: Result
+  fn query_effects(db: &Connection) -> Vec<Effect> {
+    let mut stmt = db.prepare("select * from effects order by id").unwrap();
+    
+    let effects: Vec<Effect> = stmt.query_map(&[], |row| (row.get(0), row.get(1))).unwrap().map(|row| {
+      let row = row.unwrap();
+      let id: i64 = row.0;
+      let data: String = row.1;
+      json::decode(&data).unwrap()
+    }).collect();
+
+    debug!("effects: #{:?}", effects);
+
+    effects
+  }
+  
+  fn load_from<P: AsRef<Path>>(path: P) -> Self {
+    let lock = Lock::new(Path::new(PID_FILE))
+      .expect("Couldn't acquire lock");
+
+    let mut db = Connection::open(path)
+      .expect("Failed to open db");
+
+    if !Self::is_initialized(&db) {
+      Self::initialize_db(&mut db);
+    }
+
+    let effects = Self::query_effects(&db);
+    let model = Model::from_effects(effects);
+
+    info!("Loaded {} tasks from disk", model.tasks.len());
+
+    SqliteStore {
+      model: model,
+      db: db,
+      _file_lock: lock
+    }
+  }
+  
+}
+
+impl StoreEngine for SqliteStore {
+  type LoadErr = ();
+
+  fn new() -> Result<Self, Self::LoadErr> {
+    // TODO: error handling
+    Ok(Self::load_from("store.sqlite"))
+  }
+  
+  fn model<'a>(&'a mut self) -> &'a mut Model {
+    &mut self.model
+  }
+}
+
+impl Drop for SqliteStore {
+  fn drop(&mut self) {
+    // Ugh
+    let tx = self.db.transaction()
+      .expect("Failed to create transacton");
+
+    tx.execute("delete from effects", &[]).unwrap();
+    for effect in &self.model.applied_effects {
+      let json = json::encode(&effect).unwrap();
+      debug!("Inserting JSON: {:?}", json);
+      tx.execute("insert into effects (json) values ($1)", &[&json])
+        .unwrap();
+    }
+
+    tx.commit();
+  }
+}
+
+// rustc-serialize
+
+pub struct TrivialStore {
+  model: Model,
   effects_path: PathBuf,
   _file_lock: Lock,
 }

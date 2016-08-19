@@ -5,11 +5,11 @@ use std::collections::HashMap;
          RustcEncodable, RustcDecodable)]
 pub enum Effect {
   AddTask(Task),
-  ChangeTaskState(Uuid, TaskState),
   // AddTags(Uuid, Tags),
   // RemoveTags(Uuid, Tags),
   DeleteTask(Uuid),
   // Undo,
+  ChangeTaskState(Uuid, TaskState),
 }
 
 pub struct Model {

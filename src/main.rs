@@ -2,7 +2,6 @@ extern crate rtask;
 #[macro_use] extern crate log;
 extern crate env_logger;
 
-use rtask::store::*;
 use rtask::*;
 
 use rtask::commands::Command;
@@ -16,7 +15,8 @@ fn main() {
 
   chdir();
 
-  let mut store = TrivialStore::new().expect("Failed to open store");
+  //let mut store = TrivialStore::new().expect("Failed to open store");
+  let mut store = SqliteStore::new().expect("Failed to open store");
   let model = store.model();
 
   let command = Command::from_args();
