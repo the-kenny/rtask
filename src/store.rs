@@ -32,13 +32,13 @@ pub struct SqliteStore {
 
 impl SqliteStore {
   fn is_initialized(db: &Connection) -> bool {
-    db.query_row("SELECT * FROM sqlite_master 
-                  WHERE name = 'effects' 
+    db.query_row("SELECT * FROM sqlite_master
+                  WHERE name = 'effects'
                   AND   type = 'table'",
                  &[], |_| 0)
       .is_ok()
   }
-  
+
   fn initialize_db(db: &mut Connection) {
     assert!(!Self::is_initialized(&db));
 
@@ -52,11 +52,9 @@ impl SqliteStore {
   // TODO: Result
   fn query_effects(db: &Connection) -> Vec<Effect> {
     let mut stmt = db.prepare("select * from effects order by id").unwrap();
-    
-    let effects: Vec<Effect> = stmt.query_map(&[], |row| (row.get(0), row.get(1))).unwrap().map(|row| {
-      let row = row.unwrap();
-      let id: i64 = row.0;
-      let data: String = row.1;
+
+    let effects: Vec<Effect> = stmt.query_map(&[], |row| row.get(1)).unwrap().map(|row| {
+      let data: String = row.unwrap();
       json::decode(&data).unwrap()
     }).collect();
 
@@ -64,7 +62,7 @@ impl SqliteStore {
 
     effects
   }
-  
+
   fn load_from<P: AsRef<Path>>(path: P) -> Self {
     let lock = Lock::new(Path::new(PID_FILE))
       .expect("Couldn't acquire lock");
@@ -87,7 +85,7 @@ impl SqliteStore {
       _file_lock: lock
     }
   }
-  
+
 }
 
 impl StoreEngine for SqliteStore {
@@ -97,7 +95,7 @@ impl StoreEngine for SqliteStore {
     // TODO: error handling
     Ok(Self::load_from("store.sqlite"))
   }
-  
+
   fn model<'a>(&'a mut self) -> &'a mut Model {
     &mut self.model
   }
@@ -105,19 +103,30 @@ impl StoreEngine for SqliteStore {
 
 impl Drop for SqliteStore {
   fn drop(&mut self) {
+    if !self.model.is_dirty() {
+      debug!("Not serializing as model isn't dirty");
+      return
+    }
+
     // Ugh
     let tx = self.db.transaction()
       .expect("Failed to create transacton");
 
-    tx.execute("delete from effects", &[]).unwrap();
-    for effect in &self.model.applied_effects {
-      let json = json::encode(&effect).unwrap();
-      debug!("Inserting JSON: {:?}", json);
-      tx.execute("insert into effects (json) values ($1)", &[&json])
-        .unwrap();
+    let row_count: i64 = tx.query_row("select count(id) from effects", &[], |row| row.get(0)).unwrap();
+    debug!("Got {} rows", row_count);
+
+    for (n, effect) in self.model.applied_effects.iter().enumerate() {
+      if n >= row_count as usize {
+        let json = json::encode(&effect).unwrap();
+        debug!("Inserting JSON: {:?}", json);
+        tx.execute("insert into effects (json) values ($1)", &[&json])
+          .unwrap();
+      } else {
+        debug!("Skipping row {}", n);
+      }
     }
 
-    tx.commit();
+    tx.commit().expect("Failed to commit transaction");
   }
 }
 
@@ -134,7 +143,7 @@ impl StoreEngine for TrivialStore {
   fn new() -> Result<Self, Self::LoadErr> {
     Ok(Self::load_from("effects.bin"))
   }
-  
+
   fn model<'a>(&'a mut self) -> &'a mut Model {
     &mut self.model
   }
