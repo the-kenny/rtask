@@ -6,7 +6,7 @@ in rec {
     name = "rust";
     version = "1.2.3.4";
     src = ./.;
-    buildInputs = with pkgs; [ rustc cargo ];
+    buildInputs = with pkgs; [ rustc cargo pkgconfig sqlite ];
 
     RUST_LOG="rtask=info";
     RTASK_DIRECTORY = "./store/";
