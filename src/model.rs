@@ -7,9 +7,9 @@ pub enum Effect {
   AddTask(Task),
   // AddTags(Uuid, Tags),
   // RemoveTags(Uuid, Tags),
+  ChangeTaskState(Uuid, TaskState),
   DeleteTask(Uuid),
   // Undo,
-  ChangeTaskState(Uuid, TaskState),
 }
 
 pub struct Model {

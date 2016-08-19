@@ -27,7 +27,7 @@ pub struct SqliteStore {
   model: Model,
 
   db: Connection,
-  _file_lock: Lock,
+  _file_lock: Option<Lock>,
 }
 
 impl SqliteStore {
@@ -85,7 +85,15 @@ impl SqliteStore {
     SqliteStore {
       model: model,
       db: db,
-      _file_lock: lock
+      _file_lock: Some(lock)
+    }
+  }
+
+  pub fn new_in_memory() -> Self {
+    SqliteStore {
+      model: Model::new(),
+      db: Connection::open_in_memory().unwrap(),
+      _file_lock: None,
     }
   }
 
@@ -133,7 +141,7 @@ impl Drop for SqliteStore {
   }
 }
 
-// rustc-serialize
+// bincode
 
 pub struct TrivialStore {
   model: Model,
