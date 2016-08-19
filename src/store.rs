@@ -17,14 +17,14 @@ pub trait StoreEngine: Sized + Drop {
   fn model<'a>(&'a mut self) -> &'a mut Model;
 }
 
-pub struct TaskStore {
+pub struct TrivialStore {
   model: Model,
 
   effects_path: PathBuf,
   _file_lock: Lock,
 }
 
-impl StoreEngine for TaskStore {
+impl StoreEngine for TrivialStore {
   type LoadErr = ();
   fn new() -> Result<Self, Self::LoadErr> {
     Ok(Self::load_from("effects.bin"))
@@ -35,7 +35,7 @@ impl StoreEngine for TaskStore {
   }
 }
 
-impl TaskStore {
+impl TrivialStore {
   fn load_from<P: AsRef<Path>>(path: P) -> Self {
     let lock = Lock::new(Path::new(PID_FILE))
       .expect("Couldn't acquire lock");
@@ -57,7 +57,7 @@ impl TaskStore {
 
     info!("Loaded {} tasks from disk", model.tasks.len());
 
-    TaskStore {
+    TrivialStore {
       model: model,
       effects_path: path.as_ref().to_path_buf(),
 
@@ -72,7 +72,7 @@ impl TaskStore {
   }
 }
 
-impl Drop for TaskStore {
+impl Drop for TrivialStore {
   fn drop(&mut self) {
     let mut file = fs::OpenOptions::new()
       .read(true)
@@ -81,7 +81,7 @@ impl Drop for TaskStore {
       .open(&self.effects_path)
       .expect("Failed to open tasks-file for writing");
 
-    info!("Dropping TaskStore");
+    info!("Dropping TrivialStore");
     if self.model.is_dirty() {
       info!("Serializing effects to disk");
       self.serialize().write(&mut file).unwrap();
@@ -145,7 +145,7 @@ mod tests {
 
     let task = Task::new("task #1");
     {
-      let mut store = TaskStore::load_from(&tempfile);
+      let mut store = TrivialStore::load_from(&tempfile);
       assert_eq!(0, store.model.tasks.len());
       store.model.apply_effect(Effect::AddTask(task.clone()));
       assert_eq!(1, store.model.tasks.len());
@@ -154,7 +154,7 @@ mod tests {
     {
       // Load from file, check if everything is as we've left it
       // TODO: Check for whole-model equality
-      let store = TaskStore::load_from(&tempfile);
+      let store = TrivialStore::load_from(&tempfile);
       assert_eq!(1, store.model.tasks.len());
       assert_eq!(Some(&task), store.model.tasks.get(&task.uuid));
     }

@@ -16,7 +16,7 @@ fn main() {
 
   chdir();
 
-  let mut store = TaskStore::new().expect("Failed to open store");
+  let mut store = TrivialStore::new().expect("Failed to open store");
   let model = store.model();
 
   let command = Command::from_args();
