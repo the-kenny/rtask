@@ -30,7 +30,7 @@ impl SqliteStorage {
     info!("Initializing SQL Storage");
 
     let schema = include_str!("schema.sql");
-    let commands = schema.split(";").map(str::trim).filter(|s| !s.is_empty());
+    let commands = schema.split("\n\n").map(str::trim).filter(|s| !s.is_empty());
 
     for command in commands {
       debug!("Executing SQL: {:?}", command);

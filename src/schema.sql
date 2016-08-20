@@ -5,4 +5,10 @@ create table effects (
   json TEXT NOT NULL
 );
 
+create trigger no_delete_trigger
+  before delete on effects
+  begin
+    select raise(rollback, "delete not allowed");
+  end;
+
 commit;
