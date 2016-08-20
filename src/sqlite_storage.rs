@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use rusqlite::Connection;
+use rusqlite::{Connection, Error};
 use rustc_serialize::json;
 
 use ::file_lock::Lock;
@@ -24,26 +24,27 @@ impl SqliteStorage {
       .is_ok()
   }
 
-  fn initialize_db(db: &mut Connection) {
-    assert!(!Self::is_initialized(&db));
+  fn initialize_db(db: &mut Connection) -> Result<(), Error> {
+    assert_eq!(false, Self::is_initialized(&db));
 
     info!("Initializing SQL Storage");
 
     let schema = include_str!("schema.sql");
     let commands = schema.split(";").map(str::trim).filter(|s| !s.is_empty());
+
     for command in commands {
       debug!("Executing SQL: {:?}", command);
-      db.execute(&format!("{};", command), &[]).unwrap();
+      try!(db.execute(&format!("{};", command), &[]));
     }
+    Ok(())
   }
 
-  // TODO: Result
-  fn query_effects(db: &Connection) -> Vec<Effect> {
-    let mut stmt = db.prepare("select * from effects order by id").unwrap();
+  fn query_effects(db: &Connection) -> Result<Vec<Effect>, Error> {
+    let mut stmt = try!(db.prepare("select * from effects order by id"));
 
-    let effects: Vec<Effect> = stmt.query_map(&[], |row| row.get(1)).unwrap().map(|row| {
-      let data: String = row.unwrap();
-      json::decode(&data).unwrap()
+    let effects: Result<Vec<Effect>, _> = try!(stmt.query_map(&[], |row| row.get(1))).map(|row| {
+      let data: String = try!(row);
+      Ok(json::decode(&data).unwrap())
     }).collect();
 
     debug!("effects: #{:?}", effects);
@@ -59,10 +60,12 @@ impl SqliteStorage {
       .expect("Failed to open db");
 
     if !Self::is_initialized(&db) {
-      Self::initialize_db(&mut db);
+      Self::initialize_db(&mut db)
+        .expect("Failed to initialize DB");
     }
 
-    let effects = Self::query_effects(&db);
+    let effects = Self::query_effects(&db)
+      .expect("Failed to fetch effects from DB");
     let model = Model::from_effects(effects);
 
     info!("Loaded {} tasks from disk", model.tasks.len());
