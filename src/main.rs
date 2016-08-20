@@ -15,8 +15,7 @@ fn main() {
 
   chdir();
 
-  //let mut store = TrivialStore::new().expect("Failed to open store");
-  let mut store = SqliteStore::new().expect("Failed to open store");
+  let mut store = Storage::new().expect("Failed to open store");
   let model = store.model();
 
   let command = Command::from_args();

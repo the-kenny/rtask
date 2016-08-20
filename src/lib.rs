@@ -8,7 +8,6 @@ extern crate rusqlite;
 
 pub mod commands;
 pub mod task;
-pub mod store;
 pub mod model;
 
 mod file_lock;
@@ -16,4 +15,10 @@ pub mod terminal_size;
 
 pub use task::*;
 pub use model::*;
-pub use store::*;
+
+pub mod storage_engine;
+pub use storage_engine::*;
+
+mod sqlite_storage;
+
+pub type Storage = sqlite_storage::SqliteStorage;
