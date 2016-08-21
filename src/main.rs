@@ -33,7 +33,9 @@ fn main() {
         // TODO: Calculate padding
         let right_padding = 10 + 8;
         let terminal_width = terminal_size().columns - right_padding;
-        for task in model.all_tasks() {
+        for task in model.all_tasks()
+          .iter()
+          .filter(|t| t.status == TaskState::Open) {
           println!("{short} {d:<w$} u:{urgency:<3}",
                    short=task.short_id(),
                    w=terminal_width,
