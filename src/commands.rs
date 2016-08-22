@@ -19,6 +19,7 @@ pub enum Command {
   List,
   Show(TaskRef),
   Add(Title, Tags),
+  MarkDone(TaskRef),
   Delete(TaskRef),
 }
 
@@ -33,48 +34,57 @@ impl Command {
       return Ok(Command::List)
     }
 
-    // TODO: Simplify when slice_patterns get stabilized
-    match args[0].as_ref() {
-      "list" if args.len() == 1 => {
-        if args.len() > 1 {
-          Err(ParseError("Too many arguments to `list`".into()))
-        } else {
-          Ok(Command::List)
-        }
-      },
-      "list" => Err(ParseError("Invalid arguments".into())),
-      "show" if args.len() == 2 => {
-        try!(TaskRef::from_str(&args[1]).map(Command::Show).map(Ok))
-      },
-      "show" => Err(ParseError("Invalid arguments".into())),
-      "add" => {
-        let params = args.iter().skip(1);
+    // Try to parse args[0] as TaskRef first
+    if let Ok(tr) = TaskRef::from_str(&args[0]) {
+      match args.get(1).map(|s| &s[..]) {
+        None => Ok(Command::Show(tr)),
+        Some("done") => Ok(Command::MarkDone(tr)),
+        _ => unimplemented!()
+      }
+    } else {
+      // TODO: Simplify when slice_patterns get stabilized
+      match args[0].as_ref() {
+        "list" if args.len() == 1 => {
+          if args.len() > 1 {
+            Err(ParseError("Too many arguments to `list`".into()))
+          } else {
+            Ok(Command::List)
+          }
+        },
+        "list" => Err(ParseError("Invalid arguments".into())),
+        "show" if args.len() == 2 => {
+          try!(TaskRef::from_str(&args[1]).map(Command::Show).map(Ok))
+        },
+        "show" => Err(ParseError("Invalid arguments".into())),
+        "add" => {
+          let params = args.iter().skip(1);
 
-        let tags: Tags = Tags::from_iter(
-          params.clone()
-            .into_iter()
-            .filter(|s| s.is_tag())
-            .flat_map(|s| s.as_tag()));
+          let tags: Tags = Tags::from_iter(
+            params.clone()
+              .into_iter()
+              .filter(|s| s.is_tag())
+              .flat_map(|s| s.as_tag()));
 
-        let title = params
-          .filter(|p| !p.is_tag())
-          .fold(String::new(), |acc, arg| acc + " " + arg)
-          .trim()
-          .to_string();
+          let title = params
+            .filter(|p| !p.is_tag())
+            .fold(String::new(), |acc, arg| acc + " " + arg)
+            .trim()
+            .to_string();
 
-        if title != "" {
-          info!("title: {:?}, tags: {:?}", title, tags);
+          if title != "" {
+            info!("title: {:?}, tags: {:?}", title, tags);
 
-          Ok(Command::Add(title, tags))
-        } else {
-          Err(ParseError("Failed to parse parameters".into()))
-        }
-      },
-      "del" if args.len() == 2 => {
-        try!(TaskRef::from_str(&args[1]).map(Command::Delete).map(Ok))
-      },
-      "del" => Err(ParseError("Invalid arguments".into())),
-      v => Err(ParseError(format!("Unknown command {}", v)))
+            Ok(Command::Add(title, tags))
+          } else {
+            Err(ParseError("Failed to parse parameters".into()))
+          }
+        },
+        "del" if args.len() == 2 => {
+          try!(TaskRef::from_str(&args[1]).map(Command::Delete).map(Ok))
+        },
+        "del" => Err(ParseError("Invalid arguments".into())),
+        v => Err(ParseError(format!("Unknown command {}", v)))
+      }
     }
   }
 }

@@ -1,6 +1,7 @@
 extern crate rtask;
 #[macro_use] extern crate log;
 extern crate env_logger;
+extern crate time;
 
 use rtask::*;
 
@@ -64,6 +65,22 @@ fn main() {
           Ok(task) => {
             println!("Deleting task '{}'", task.description);
             Some(Effect::DeleteTask(task.uuid.clone()))
+          },
+          Err(TaskNotFound) => {
+            println!("No matching task found");
+            None
+          },
+          Err(MultipleResults) => {
+            println!("Found multiple tasks matching {}", r);
+            None
+          }
+        }
+      },
+      Command::MarkDone(r) => {
+        match model.find_task(&r) {
+          Ok(task) => {
+            println!("Marking task '{}' as done", task.description);
+            Some(Effect::ChangeTaskState(task.uuid.clone(), TaskState::Done(time::get_time())))
           },
           Err(TaskNotFound) => {
             println!("No matching task found");
