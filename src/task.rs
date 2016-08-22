@@ -62,7 +62,7 @@ impl Task {
     let mut urgency = 0.0;
 
     // Add 0.01 for every day since creation
-    urgency = urgency + (days as f32 / 100.0);
+    urgency += days as f32 / 100.0;
 
     urgency
   }
