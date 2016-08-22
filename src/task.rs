@@ -73,6 +73,13 @@ impl Task {
     s
   }
 
+  pub fn is_done(&self) -> bool {
+    match self.status {
+      TaskState::Done(_) => true,
+      TaskState::Open    => false,
+    }
+  }
+
   // pub fn mark_done(&mut self) {
   //   use self::TaskState::*;
   //   match self.status {

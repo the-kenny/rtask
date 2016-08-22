@@ -35,7 +35,7 @@ fn main() {
         let terminal_width = terminal_size().columns - right_padding;
         for task in model.all_tasks()
           .iter()
-          .filter(|t| t.status == TaskState::Open) {
+          .filter(|t| !t.is_done()) {
           println!("{short} {d:<w$} u:{urgency:<3}",
                    short=task.short_id(),
                    w=terminal_width,
