@@ -1,10 +1,11 @@
 use std::path::Path;
+use std::collections::BTreeMap;
 
 use rusqlite::{Connection, Error};
 use rustc_serialize::json;
 
 use ::file_lock::Lock;
-use ::{ Model, Effect };
+use ::{ Model, Effect, Uuid };
 use ::StorageEngine;
 use ::storage_engine::PID_FILE;
 
@@ -52,6 +53,23 @@ impl SqliteStorage {
     effects
   }
 
+  fn query_numerical_ids(db: &Connection)  -> Result<BTreeMap<Uuid, u64>, Error> {
+    let mut stmt = try!(db.prepare("select id, uuid from numerical_ids"));
+
+    let uuids = try!(stmt.query_map(&[], |row| {
+      let n: i64 = row.get(0);
+      let uuid: String = row.get(1);
+      let uuid: Uuid = json::decode(&uuid).unwrap();
+      (uuid, n as u64)
+    }))
+      .map(Result::unwrap)
+      .collect();
+
+    debug!("numerical_ids: {:?}", uuids);
+
+    Ok(uuids)
+  }
+
   fn load_from<P: AsRef<Path>>(path: P) -> Self {
     let lock = Lock::new(Path::new(PID_FILE))
       .expect("Couldn't acquire lock");
@@ -66,7 +84,9 @@ impl SqliteStorage {
 
     let effects = Self::query_effects(&db)
       .expect("Failed to fetch effects from DB");
-    let model = Model::from_effects(effects);
+    let mut model = Model::from_effects(effects);
+    model.numerical_ids = Self::query_numerical_ids(&db)
+      .expect("Failed to fetch numerical IDs");
 
     info!("Loaded {} tasks from disk", model.tasks.len());
 
@@ -123,6 +143,16 @@ impl Drop for SqliteStorage {
       } else {
         debug!("Skipping row {}", n);
       }
+    }
+
+    debug!("Storing numerical_ids");
+    tx.execute("delete from numerical_ids", &[])
+      .expect("Failed to clear numerical_ids");
+    for (uuid, n) in self.model.numerical_ids.iter() {
+      let n = *n as i64;
+      let uuid = json::encode(&uuid).unwrap();
+      tx.execute("insert into numerical_ids (id, uuid) values ($1, $2)", &[&n, &uuid])
+        .expect("Failed to insert numerical id");
     }
 
     tx.commit().expect("Failed to commit transaction");

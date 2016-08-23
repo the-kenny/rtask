@@ -17,5 +17,9 @@ create trigger no_upate_trigger
     select raise(rollback, "update not allowed");
   end;
 
+create table numerical_ids (
+  id INTEGER NOT NULL,
+  uuid TEXT NOT NULL
+);
 
 commit;

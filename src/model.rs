@@ -1,5 +1,5 @@
 use ::{Task, TaskState, Uuid, TaskRef};
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 #[derive(Clone, Debug, PartialEq, Eq,
          RustcEncodable, RustcDecodable)]
@@ -15,6 +15,7 @@ pub enum Effect {
 pub struct Model {
   pub tasks: HashMap<Uuid, Task>,
   pub applied_effects: Vec<Effect>,
+  pub numerical_ids: BTreeMap<Uuid, u64>,
 
   is_dirty: bool,
 }
@@ -24,6 +25,8 @@ impl Model {
     Model {
       tasks: HashMap::new(),
       applied_effects: Vec::new(),
+      numerical_ids: BTreeMap::new(),
+
       is_dirty: false,
     }
   }
@@ -64,6 +67,23 @@ impl Model {
   }
 }
 
+// Numerical-ID Handling
+impl Model {
+  pub fn recalculate_numerical_ids(&mut self) {
+    debug!("Recalculating numerical-ids");
+
+    self.is_dirty = true;
+
+    // TODO: Caller should decide which Tasks to index
+    self.numerical_ids = self.all_tasks().into_iter()
+      .filter(|t| !t.is_done())
+      .enumerate()
+      .take(100)
+      .map(|(n, t)| (t.uuid.clone(), (n as u64)+1))
+      .collect();
+  }
+}
+
 #[derive(Debug,PartialEq,Eq)]
 pub enum FindTaskError {
   TaskNotFound,
@@ -87,7 +107,16 @@ impl Model {
         self.tasks.keys().filter(|uuid| {
           uuid.simple().to_string().starts_with(s)
         }).collect()
-      }
+      },
+      TaskRef::Numerical(ref n) => {
+        let res = self.numerical_ids.iter()
+          .find(|&(_, i)| n == i);
+
+        match res {
+          Some((uuid, _)) => vec![uuid],
+          None => vec![],
+        }
+      },
     };
 
     use self::FindTaskError::*;
@@ -108,7 +137,7 @@ mod tests {
   use super::*;
   use ::{Task, TaskRef, TaskState};
   use time;
-  
+
   #[test]
   fn test_add_delete_task() {
     let mut m = Model::new();

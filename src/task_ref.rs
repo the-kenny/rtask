@@ -5,7 +5,7 @@ use ::task::Uuid;
 pub enum TaskRef {
   ShortUUID(String),
   FullUUID(Uuid),
-  // Numerical(u64),
+  Numerical(u64),
 }
 
 #[derive(Debug)]
@@ -19,6 +19,7 @@ use std::str::FromStr;
 impl FromStr for TaskRef {
   type Err = TaskRefError;
   fn from_str(s: &str) -> Result<TaskRef, TaskRefError> {
+    let numerical = u64::from_str(s).ok().map(TaskRef::Numerical);
     let uuid = Uuid::parse_str(s).ok().map(TaskRef::FullUUID);
     let short = if s.len() == SHORT_UUID_LEN {
       Some(TaskRef::ShortUUID(s.into()))
@@ -26,7 +27,7 @@ impl FromStr for TaskRef {
       None
     };
 
-    uuid.or(short).map_or(Err(TaskRefError), Ok)
+    numerical.or(uuid).or(short).map_or(Err(TaskRefError), Ok)
   }
 }
 
@@ -40,7 +41,8 @@ impl fmt::Display for TaskRef {
   fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
     match *self {
       TaskRef::ShortUUID(ref s) => f.write_str(s),
-      TaskRef::FullUUID(ref u) => f.write_str(&u.hyphenated().to_string()),
+      TaskRef::FullUUID(ref u)  => f.write_str(&u.hyphenated().to_string()),
+      TaskRef::Numerical(n)     => f.write_str(&n.to_string()),
     }
   }
 }

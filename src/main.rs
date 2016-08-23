@@ -31,14 +31,21 @@ fn main() {
 
     let effect = match command {
       Command::List => {
+        model.recalculate_numerical_ids();
+
         // TODO: Calculate padding
         let right_padding = 10 + 8;
         let terminal_width = terminal_size().columns - right_padding;
-        for task in model.all_tasks()
-          .iter()
-          .filter(|t| !t.is_done()) {
+        let tasks = model.all_tasks().into_iter()
+          .filter(|t| !t.is_done());
+
+        for task in tasks {
+          let short = model.numerical_ids.get(&task.uuid)
+            .map(u64::to_string)
+            .unwrap_or(task.short_id());
+
           println!("{short} {d:<w$} u:{urgency:<3}",
-                   short=task.short_id(),
+                   short=short,
                    w=terminal_width,
                    d=task.description.ellipsize(60),
                    urgency=task.urgency());
