@@ -1,4 +1,4 @@
-use super::task::*;
+use ::{Task, TaskState, Uuid, TaskRef};
 use std::collections::HashMap;
 
 #[derive(Clone, Debug, PartialEq, Eq,
@@ -62,7 +62,15 @@ impl Model {
       .expect("failed to get task")
       .status = state;
   }
+}
 
+#[derive(Debug,PartialEq,Eq)]
+pub enum FindTaskError {
+  TaskNotFound,
+  MultipleResults
+}
+
+impl Model {
   // TODO: Iterator
   pub fn all_tasks<'a>(&'a self) -> Vec<&'a Task> {
     let mut v: Vec<&Task> = self.tasks.values().collect();
@@ -95,61 +103,10 @@ impl Model {
   }
 }
 
-#[derive(Debug,PartialEq,Eq)]
-pub enum FindTaskError {
-  TaskNotFound,
-  MultipleResults
-}
-
-// TODO: Use references instead of ownership
-#[derive(Debug, PartialEq, Eq)]
-pub enum TaskRef {
-  ShortUUID(String),
-  FullUUID(Uuid),
-  // Numerical(u64),
-}
-
-#[derive(Debug)]
-pub struct TaskRefError;
-
-const SHORT_UUID_MIN_LEN: usize = 6;
-
-use std::fmt;
-use std::str::FromStr;
-
-impl FromStr for TaskRef {
-  type Err = TaskRefError;
-  fn from_str(s: &str) -> Result<TaskRef, TaskRefError> {
-    let uuid = Uuid::parse_str(s).ok().map(TaskRef::FullUUID);
-    let short = if s.len() >= SHORT_UUID_MIN_LEN {
-      Some(TaskRef::ShortUUID(s.into()))
-    } else {
-      None
-    };
-
-    uuid.or(short).map_or(Err(TaskRefError), Ok)
-  }
-}
-
-impl From<Uuid> for TaskRef {
-  fn from(u: Uuid) -> Self {
-    TaskRef::FullUUID(u)
-  }
-}
-
-impl fmt::Display for TaskRef {
-  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-    match *self {
-      TaskRef::ShortUUID(ref s) => f.write_str(s),
-      TaskRef::FullUUID(ref u) => f.write_str(&u.hyphenated().to_string()),
-    }
-  }
-}
-
 #[cfg(test)]
 mod tests {
   use super::*;
-  use ::{Task, TaskState};
+  use ::{Task, TaskRef, TaskState};
   use time;
   
   #[test]

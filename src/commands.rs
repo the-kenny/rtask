@@ -1,5 +1,5 @@
 use ::task::*;
-use ::model::{TaskRef, TaskRefError};
+use ::{TaskRef, TaskRefError};
 
 use std::env;
 use std::iter::FromIterator;

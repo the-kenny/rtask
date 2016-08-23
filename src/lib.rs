@@ -9,12 +9,14 @@ extern crate rusqlite;
 pub mod commands;
 pub mod task;
 pub mod model;
+pub mod task_ref;
 
 mod file_lock;
 pub mod terminal_size;
 
 pub use task::*;
 pub use model::*;
+pub use task_ref::*;
 
 pub mod storage_engine;
 pub use storage_engine::*;
