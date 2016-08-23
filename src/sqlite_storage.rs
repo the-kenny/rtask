@@ -1,5 +1,6 @@
 use std::path::Path;
 use std::collections::BTreeMap;
+use std::fs;
 
 use rusqlite::{Connection, Error};
 use rustc_serialize::json;
@@ -13,7 +14,7 @@ pub struct SqliteStorage {
   model: Model,
 
   db: Connection,
-  _file_lock: Option<Lock>,
+  file_lock: Option<Lock>,
 }
 
 impl SqliteStorage {
@@ -93,7 +94,7 @@ impl SqliteStorage {
     SqliteStorage {
       model: model,
       db: db,
-      _file_lock: Some(lock)
+      file_lock: Some(lock)
     }
   }
 
@@ -101,7 +102,7 @@ impl SqliteStorage {
     SqliteStorage {
       model: Model::new(),
       db: Connection::open_in_memory().unwrap(),
-      _file_lock: None,
+      file_lock: None,
     }
   }
 
@@ -156,6 +157,11 @@ impl Drop for SqliteStorage {
     }
 
     tx.commit().expect("Failed to commit transaction");
+
+    if self.file_lock.is_some() {
+      fs::remove_file(PID_FILE)
+        .expect("Failed to remove pid file");
+    }
   }
 }
 
