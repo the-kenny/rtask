@@ -41,7 +41,7 @@ impl Command {
         Some("show")   => Ok(Command::Show(tr)),
         Some("done")   => Ok(Command::MarkDone(tr)),
         Some("delete") => Ok(Command::Delete(tr)),
-        _ => unimplemented!()
+        Some(cmd)      => Err(ParseError(format!("Invalid command '{}'", cmd)))
       }
     } else {
       // TODO: Simplify when slice_patterns get stabilized
