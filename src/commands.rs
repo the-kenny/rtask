@@ -37,9 +37,10 @@ impl Command {
     // Try to parse args[0] as TaskRef first
     if let Ok(tr) = TaskRef::from_str(&args[0]) {
       match args.get(1).map(|s| &s[..]) {
-        None => Ok(Command::Show(tr)),
-        Some("show") => Ok(Command::Show(tr)),
-        Some("done") => Ok(Command::MarkDone(tr)),
+        None           => Ok(Command::Show(tr)),
+        Some("show")   => Ok(Command::Show(tr)),
+        Some("done")   => Ok(Command::MarkDone(tr)),
+        Some("delete") => Ok(Command::Delete(tr)),
         _ => unimplemented!()
       }
     } else {
@@ -80,10 +81,6 @@ impl Command {
             Err(ParseError("Failed to parse parameters".into()))
           }
         },
-        "del" if args.len() == 2 => {
-          try!(TaskRef::from_str(&args[1]).map(Command::Delete).map(Ok))
-        },
-        "del" => Err(ParseError("Invalid arguments".into())),
         v => Err(ParseError(format!("Unknown command {}", v)))
       }
     }
