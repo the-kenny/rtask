@@ -55,22 +55,19 @@ fn main() {
       },
       Command::Show(r) => {
         match model.find_task(&r) {
-          Ok(task) => println!("{:?}", task),
-          Err(TaskNotFound) => println!("Found no tasks matching {}", r),
+          Ok(task)             => println!("{:?}", task),
+          Err(TaskNotFound)    => println!("Found no tasks matching {}", r),
           Err(MultipleResults) => println!("Found multiple tasks matching {}", r),
         }
 
         None
       },
       Command::Add(title, tags) => {
-        let task: Task = Task::new_with_tags(&title, tags);
-        println!("Adding task '{}'", task.description);
-        Some(Effect::AddTask(task))
+        Some(Effect::AddTask(Task::new_with_tags(&title, tags)))
       },
       Command::Delete(r) => {
         match model.find_task(&r) {
           Ok(task) => {
-            println!("Deleting task '{}'", task.description);
             Some(Effect::DeleteTask(task.uuid.clone()))
           },
           Err(TaskNotFound) => {
@@ -86,7 +83,6 @@ fn main() {
       Command::MarkDone(r) => {
         match model.find_task(&r) {
           Ok(task) => {
-            println!("Marking task '{}' as done", task.description);
             Some(Effect::ChangeTaskState(task.uuid.clone(), TaskState::Done(time::get_time())))
           },
           Err(TaskNotFound) => {
@@ -100,6 +96,21 @@ fn main() {
         }
       }
     };
+
+    // Print effect descriptions
+    if let Some(ref effect) = effect {
+      match *effect {
+        Effect::AddTask(ref t)       => println!("Added Task '{}'", t.description),
+        Effect::DeleteTask(ref uuid) => println!("Deleted task '{}'", model.tasks[uuid].description),
+        Effect::ChangeTaskState(ref uuid, ref state) => {
+          let ref t = model.tasks[uuid];
+          match *state {
+            TaskState::Done(_) => println!("Marking task '{}' as done", t.description),
+            TaskState::Open    => println!("Marking task '{}' as open", t.description),
+          }
+        },
+      }
+    }
 
     effect.map(|e| model.apply_effect(e));
   } else {
