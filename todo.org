@@ -1,8 +1,5 @@
 * TODO (non-exhaustive)
   - Find a nice list-output and implement it
-  - Implement a ~TaskRef~ type that is used to refer to tasks by name,
-    id, etc.
-  - Numerical IDs recalculated on `List`
   - "Virtual" tags for =Done= etc. (for filtering)
   - Search, filtering
   
