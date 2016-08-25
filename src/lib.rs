@@ -4,6 +4,7 @@ extern crate rustc_serialize;
 extern crate time;
 extern crate uuid;
 extern crate rusqlite;
+extern crate ansi_term;
 #[macro_use] extern crate log;
 
 pub mod commands;

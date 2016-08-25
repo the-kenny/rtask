@@ -1,4 +1,5 @@
 use std::io;
+use ansi_term::{Colour, Style};
 
 use ::task::StringExt;
 
@@ -39,16 +40,28 @@ impl<'a, S: AsRef<str>> TablePrinter<'a, S> {
   pub fn print(&self, writer: &mut io::Write) -> io::Result<()> {
     // TODO: Implement max. terminal size handling
 
+    let header_style = Style::default().bold().underline();
     for (title, width) in self.titles.iter().zip(self.widths.iter()) {
-      try!(write!(writer, " {0:^1$} ", title, width));
+      // TODO: Report this issues to ansi_term
+      // TODO: styled_title and styled_title.to_string() have different .len()?!
+      let styled_title = header_style.paint(*title).to_string();
+      let diff = styled_title.len() - title.len();
+      try!(write!(writer, " {0:^1$} ", styled_title, width+diff));
     }
     try!(write!(writer, "\n"));
 
-    for row in self.rows.iter() {
+    for (nrow, row) in self.rows.iter().enumerate() {
+      let style = if nrow % 2 == 0 {
+        Style::default().on(Colour::RGB(60,60,60))
+      } else {
+        Style::default()
+      };
+      
       for (n, text) in row.iter().enumerate() {
         let width = self.widths[n];
         let text = text.as_ref();
-        try!(write!(writer, " {0:>1$} ", text.ellipsize(width), width));
+        let line = format!(" {0:>1$} ", text.ellipsize(width), width);
+        try!(write!(writer, "{}", style.paint(line)));
       }
 
       try!(write!(writer, "\n"));
