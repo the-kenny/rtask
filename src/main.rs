@@ -51,7 +51,13 @@ fn main() {
             vec![short, task.description.clone(), task.urgency().to_string()]
           }).collect();
 
-        printer::print_table(&mut io::stdout(), rows).unwrap();
+        let mut p = TablePrinter::new();
+        p.add_column("id");
+        p.add_column("desc");
+        p.add_column("urg");
+        p.rows = rows;
+        p.calculate_widths();
+        p.print(&mut io::stdout()).unwrap();
 
         None
       },
