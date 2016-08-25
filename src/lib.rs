@@ -11,6 +11,8 @@ pub mod task;
 pub mod model;
 pub mod task_ref;
 
+pub mod printer;
+
 mod file_lock;
 pub mod terminal_size;
 

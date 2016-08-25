@@ -36,20 +36,22 @@ fn main() {
         // TODO: Calculate padding
         let right_padding = 10 + 8;
         let terminal_width = terminal_size().columns - right_padding;
-        let tasks = model.all_tasks().into_iter()
-          .filter(|t| !t.is_done());
 
-        for task in tasks {
-          let short = model.numerical_ids.get(&task.uuid)
-            .map(u64::to_string)
-            .unwrap_or(task.short_id());
+        use std::io;
 
-          println!("{short} {d:<w$} u:{urgency:<3}",
-                   short=short,
-                   w=terminal_width,
-                   d=task.description.ellipsize(60),
-                   urgency=task.urgency());
-        }
+        // TODO: Find a nicer way to pass a slice of slices of
+        // string-slices
+        let rows: Vec<_> = model.all_tasks().into_iter()
+          .filter(|t| !t.is_done())
+          .map(|task| {
+            let short = model.numerical_ids.get(&task.uuid)
+              .map(u64::to_string)
+              .unwrap_or(task.short_id());
+
+            vec![short, task.description.clone(), task.urgency().to_string()]
+          }).collect();
+
+        printer::print_table(&mut io::stdout(), rows).unwrap();
 
         None
       },

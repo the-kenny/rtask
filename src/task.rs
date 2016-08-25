@@ -127,13 +127,18 @@ impl StringExt for str {
 
   fn ellipsize<'a>(&'a self, max_width: usize) -> Cow<'a, str> {
     let ellipsis = "...";
-    let cut = max_width - (ellipsis.len());
-    if self.len() <= cut {
-      self[..].into()
+
+    if ellipsis.len() >= max_width {
+      self.trim_right()[0..max_width].into()
     } else {
-      let mut s = self.trim_right()[0..cut].to_string();
-      s.push_str(ellipsis);
-      s.into()
+      let cut = max_width - ellipsis.len();
+      if self.len() <= max_width {
+        self[..].into()
+      } else {
+        let mut s = self.trim_right()[0..cut].to_string();
+        s.push_str(ellipsis);
+        s.into()
+      }
     }
   }
 }
@@ -192,5 +197,12 @@ mod tests {
       assert_eq!(true, t.is_tag());
       assert_eq!(Some("foo".to_string()), t.as_tag());
     }
+  }
+
+  #[test]
+  fn test_ellipsize() {
+    assert_eq!("foo".ellipsize(3), "foo");
+    assert_eq!("foo".ellipsize(100), "foo");
+    assert_eq!("foobar 123".ellipsize(6), "foo...");
   }
 }
