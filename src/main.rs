@@ -48,11 +48,15 @@ fn main() {
               .map(u64::to_string)
               .unwrap_or(task.short_id());
 
-            vec![short, task.description.clone(), task.urgency().to_string()]
+            vec![short,
+                 task.age().to_string(),
+                 task.description.clone(),
+                 task.urgency().to_string()]
           }).collect();
 
         let mut p = TablePrinter::new();
         p.add_column("id");
+        p.add_column("age");
         p.add_column("desc");
         p.add_column("urg");
         p.rows = rows;

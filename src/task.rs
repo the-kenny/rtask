@@ -10,6 +10,8 @@ pub type Tag = String;
 pub type Tags = HashSet<Tag>;
 pub type ExtraMap = HashMap<ExtraData, String>;
 
+pub struct Age(time::Duration);
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq,
          RustcEncodable, RustcDecodable)]
 pub enum TaskState {
@@ -65,6 +67,10 @@ impl Task {
     urgency += days as f32 / 100.0;
 
     urgency
+  }
+
+  pub fn age(&self) -> Age {
+    Age(time::get_time() - self.created)
   }
 
   pub fn short_id(&self) -> String {
@@ -149,6 +155,28 @@ impl StringExt for str {
   }
 }
 
+
+use std::fmt;
+impl fmt::Display for Age {
+  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    let Age(d) = *self;
+    let weeks  = d.num_weeks();
+    let days   = d.num_days();
+    let hours  = d.num_hours();
+    let minutes = d.num_minutes();
+    let seconds = d.num_seconds();
+
+    let s = match (weeks,days,hours,minutes,seconds) {
+      (0,0,0,0,n) => format!("{}s", n),
+      (0,0,0,n,_) => format!("{}m", n),
+      (0,0,n,_,_) => format!("{}h", n),
+      (0,n,_,_,_) => format!("{}d", n),
+      (n,_,_,_,_) => format!("{}w", n),
+    };
+
+    f.write_str(&s)
+  }
+}
 
 #[cfg(test)]
 mod tests {
