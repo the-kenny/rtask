@@ -55,11 +55,12 @@ fn main() {
           }).collect();
 
         let mut p = TablePrinter::new();
+        p.rows = rows;
+        p.width_limit = Some(terminal_width);
         p.add_column("id");
         p.add_column("age");
         p.add_column("desc");
         p.add_column("urg");
-        p.rows = rows;
         p.calculate_widths();
         p.print(&mut io::stdout()).unwrap();
 

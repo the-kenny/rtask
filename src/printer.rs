@@ -3,10 +3,11 @@ use ansi_term::{Colour, Style};
 
 use ::task::StringExt;
 
-pub struct TablePrinter<'a, S: AsRef<str>> {
+pub struct TablePrinter<'a, S> {
   titles: Vec<&'a str>,
   widths: Vec<usize>,
 
+  pub width_limit: Option<usize>,
   pub rows: Vec<Vec<S>>,
 }
 
@@ -15,7 +16,9 @@ impl<'a, S: AsRef<str>> TablePrinter<'a, S> {
     TablePrinter {
       titles: vec![],
       widths: vec![],
-      rows:   vec![],
+
+      width_limit: None,
+      rows: vec![],
     }
   }
 
@@ -36,9 +39,29 @@ impl<'a, S: AsRef<str>> TablePrinter<'a, S> {
 
     debug!("calculated widths: {:?}", self.widths);
   }
+}
 
-  pub fn print(&self, writer: &mut io::Write) -> io::Result<()> {
-    // TODO: Implement max. terminal size handling
+#[derive(Debug)]
+pub enum PrintError {
+  IO(io::Error),
+  TerminalTooNarrow
+}
+
+impl From<io::Error> for PrintError {
+  fn from(e: io::Error) -> Self {
+    PrintError::IO(e)
+  }
+}
+
+impl<'a, S: AsRef<str>> TablePrinter<'a, S> {
+  pub fn print(&self, writer: &mut io::Write) -> Result<(), PrintError> {
+    // TODO: Implement "dumb" output for dumb terminals
+
+    if let Some(width_limit) = self.width_limit {
+      if self.widths.iter().fold(0, |a,b| a+b) >= width_limit {
+        return Err(PrintError::TerminalTooNarrow)
+      }
+    }
 
     let header_style = Style::default().bold().underline();
     for (title, width) in self.titles.iter().zip(self.widths.iter()) {
@@ -56,7 +79,7 @@ impl<'a, S: AsRef<str>> TablePrinter<'a, S> {
       } else {
         Style::default()
       };
-      
+
       for (n, text) in row.iter().enumerate() {
         let width = self.widths[n];
         let text = text.as_ref();
@@ -69,44 +92,4 @@ impl<'a, S: AsRef<str>> TablePrinter<'a, S> {
 
     Ok(())
   }
-
-}
-
-// pub fn print_table<'a, S: AsRef<str>>(writer: &mut io::Write, rows: Vec<Vec<S>>) -> io::Result<()> {
-//   let mut widths = vec![0; rows[0].len()];
-//   for row in rows.iter() {
-//     for (n, field) in row.iter().enumerate() {
-//       use std::cmp;
-//       widths[n] = cmp::max(widths[n], field.as_ref().len());
-//     }
-//   }
-
-//   // TODO: Implement max. terminal size handling
-
-//   for row in rows {
-//     try!(write!(writer, " "));
-
-//     for (n, text) in row.iter().enumerate() {
-//       let width = widths[n];
-//       let text = text.as_ref();
-//       try!(write!(writer, "{0:>1$} ", text.ellipsize(width), width));
-//     }
-
-//     try!(write!(writer, "\n"));
-//   }
-
-//   Ok(())
-// }
-
-#[test]
-fn test() {
-
-  let mut t = TablePrinter::new();
-  t.add_column("ID");
-  t.add_column("Description");
-  t.rows = vec![vec!["1", "some long description foo bar baz"],
-                vec!["2", "short desc"]];
-  t.calculate_widths();
-
-  t.print(&mut io::stdout()).unwrap();
 }
