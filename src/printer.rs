@@ -58,7 +58,8 @@ impl<'a, S: AsRef<str>> TablePrinter<'a, S> {
     // TODO: Implement "dumb" output for dumb terminals
 
     if let Some(width_limit) = self.width_limit {
-      if self.widths.iter().fold(0, |a,b| a+b) >= width_limit {
+      let max_width: usize = self.widths.iter().sum();
+      if max_width >= width_limit {
         return Err(PrintError::TerminalTooNarrow)
       }
     }
