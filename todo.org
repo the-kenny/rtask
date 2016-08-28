@@ -1,5 +1,5 @@
 * TODO (non-exhaustive)
-  - Find a nice list-output and implement it
   - "Virtual" tags for =Done= etc. (for filtering)
   - Search, filtering
-  
+  - Priority system (via configured tags or otherwise)
+  - Get rid of file-lock?

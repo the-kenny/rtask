@@ -6,14 +6,14 @@ use std::io;
 use std::ffi::CString;
 use std::os::unix::ffi::OsStringExt;
 
-pub struct Lock {
+pub struct FileLock {
   fd: libc::c_int,
 }
 
-impl Lock {
+impl FileLock {
   pub fn new<P>(path: P) -> io::Result<Self>
     where P: AsRef<Path> + Debug {
-    debug!("Acquiring Lock on {:?}", path);
+    debug!("Acquiring FileLock on {:?}", path);
     let path = CString::new(path.as_ref()
                             .as_os_str()
                             .to_os_string()
@@ -27,12 +27,12 @@ impl Lock {
     if lock_result == -1 {
       Err(io::Error::last_os_error())
     } else {
-      Ok(Lock { fd: fd })
+      Ok(FileLock { fd: fd })
     }
   }
 }
 
-impl Drop for Lock {
+impl Drop for FileLock {
   fn drop(&mut self) {
     unsafe { libc::close(self.fd); }
   }

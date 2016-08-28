@@ -8,16 +8,19 @@ use rtask::*;
 use rtask::commands::Command;
 use rtask::terminal_size::*;
 
-use std::fs;
+use std::{fs,mem};
 use std::io::ErrorKind;
+
+pub const PID_FILE: &'static str = "tasks.pid";
 
 fn main() {
   env_logger::init().unwrap();
 
   chdir();
+  let _lock = FileLock::new(PID_FILE)
+    .expect("Failed to acquire lock");
 
   let mut store = Storage::new().expect("Failed to open store");
-  let model = store.model();
 
   let command = Command::from_args();
 
@@ -26,6 +29,8 @@ fn main() {
     return;
   } else if let Ok(command) = command {
     info!("Command: {:?}", command);
+
+    let model = store.model();
 
     use rtask::FindTaskError::*;
 
@@ -129,6 +134,9 @@ fn main() {
   } else {
     panic!("Invalid command :-(")
   }
+  
+  mem::drop(store);
+  fs::remove_file(PID_FILE).expect("Failed to remove pid file");
 }
 
 fn chdir() {

@@ -1,20 +1,16 @@
 use std::path::Path;
 use std::collections::BTreeMap;
-use std::fs;
 
 use rusqlite::{Connection, Error};
 use rustc_serialize::json;
 
-use ::file_lock::Lock;
 use ::{ Model, Effect, Uuid };
 use ::StorageEngine;
-use ::storage_engine::PID_FILE;
 
 pub struct SqliteStorage {
   model: Model,
 
   db: Connection,
-  file_lock: Option<Lock>,
 }
 
 impl SqliteStorage {
@@ -72,9 +68,6 @@ impl SqliteStorage {
   }
 
   fn load_from<P: AsRef<Path>>(path: P) -> Self {
-    let lock = Lock::new(Path::new(PID_FILE))
-      .expect("Couldn't acquire lock");
-
     let mut db = Connection::open(path)
       .expect("Failed to open db");
 
@@ -94,7 +87,6 @@ impl SqliteStorage {
     SqliteStorage {
       model: model,
       db: db,
-      file_lock: Some(lock)
     }
   }
 
@@ -102,7 +94,6 @@ impl SqliteStorage {
     SqliteStorage {
       model: Model::new(),
       db: Connection::open_in_memory().unwrap(),
-      file_lock: None,
     }
   }
 
@@ -132,7 +123,9 @@ impl Drop for SqliteStorage {
     let tx = self.db.transaction()
       .expect("Failed to create transacton");
 
-    let row_count: i64 = tx.query_row("select count(id) from effects", &[], |row| row.get(0)).unwrap();
+    let row_count: i64 = tx.query_row("select count(id) from effects", &[],
+                                      |row| row.get(0))
+      .unwrap();
     debug!("Got {} rows", row_count);
 
     for (n, effect) in self.model.applied_effects.iter().enumerate() {
@@ -157,11 +150,6 @@ impl Drop for SqliteStorage {
     }
 
     tx.commit().expect("Failed to commit transaction");
-
-    if self.file_lock.is_some() {
-      fs::remove_file(PID_FILE)
-        .expect("Failed to remove pid file");
-    }
   }
 }
 
