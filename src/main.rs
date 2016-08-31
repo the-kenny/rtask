@@ -57,7 +57,7 @@ fn main() {
                  task.priority.to_string(),
                  task.age().to_string(),
                  task.description.clone(),
-                 task.urgency().to_string()]
+                 format!("{:.2}", task.urgency())]
           }).collect();
 
         let mut p = TablePrinter::new();
