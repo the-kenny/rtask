@@ -21,15 +21,38 @@ pub enum TaskState {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash,
          RustcEncodable, RustcDecodable)]
+pub enum Priority {
+  Low,
+  Default,
+  High,
+  // Custom(f32),
+}
+
+impl Default for Priority {
+  fn default() -> Self { Priority::Default }
+}
+
+impl Into<f32> for Priority {
+  fn into(self) -> f32 {
+    match self {
+      Priority::Low     => -10.0,
+      Priority::Default =>   0.0,
+      Priority::High    =>  10.0,
+    }
+  }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash,
+         RustcEncodable, RustcDecodable)]
 pub enum ExtraData {
   Notes = 1,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq,
-         RustcEncodable, RustcDecodable)]
+#[derive(Clone, Debug, PartialEq, Eq, RustcEncodable)]
 pub struct Task {
   pub description: Title,
   pub status: TaskState,
+  pub priority: Priority,
   pub created: Time,
   pub modified: Time,
   pub uuid: Uuid,
@@ -43,6 +66,7 @@ impl Task {
     Task {
       description: description.to_string(),
       status: TaskState::Open,
+      priority: Priority::default(),
       created: now,
       modified: now,
       uuid: Uuid::new_v4(),
@@ -62,10 +86,8 @@ impl Task {
     let days = diff.num_days();
 
     let mut urgency = 0.0;
-
-    // Add 0.01 for every day since creation
-    urgency += days as f32 / 100.0;
-
+    urgency += days as f32 / 100.0; // Add 0.01 for every day since creation
+    urgency += self.priority.into(); // Add priority
     urgency
   }
 
@@ -93,6 +115,32 @@ impl Task {
   //     _ => ()
   //   }
   // }
+}
+
+use rustc_serialize::{Decoder,Decodable};
+impl Decodable for Task {
+  fn decode<D: Decoder>(d: &mut D) -> Result<Self, D::Error> {
+    let description = try!(d.read_struct_field("description", 0, Decodable::decode));
+    let status      = try!(d.read_struct_field("status",      0, Decodable::decode));
+    // Hack to allow missing fields (for backwards compatibility)
+    let priority: Option<Priority> = try!(d.read_struct_field("priority",    0, Decodable::decode));
+    let created     = try!(d.read_struct_field("created",     0, Decodable::decode));
+    let modified    = try!(d.read_struct_field("modified",    0, Decodable::decode));
+    let uuid        = try!(d.read_struct_field("uuid",        0, Decodable::decode));
+    let tags        = try!(d.read_struct_field("tags",        0, Decodable::decode));
+    let extras      = try!(d.read_struct_field("extras",      0, Decodable::decode));
+
+    Ok(Task {
+      description: description,
+      status: status,
+      priority: priority.unwrap_or(Priority::default()),
+      created: created,
+      modified: modified,
+      uuid: uuid,
+      tags: tags,
+      extras: extras,
+    })
+  }
 }
 
 use std::cmp;
@@ -176,6 +224,17 @@ impl fmt::Display for Age {
 
     f.write_str(&s)
   }
+}
+
+impl fmt::Display for Priority {
+  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    let s = match *self {
+      Priority::Low     => "L",
+      Priority::Default => "D",
+      Priority::High    => "H",
+    };
+    f.write_str(s)
+  }   
 }
 
 #[cfg(test)]

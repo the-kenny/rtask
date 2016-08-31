@@ -54,6 +54,7 @@ fn main() {
               .unwrap_or(task.short_id());
 
             vec![short,
+                 task.priority.to_string(),
                  task.age().to_string(),
                  task.description.clone(),
                  task.urgency().to_string()]
@@ -63,6 +64,7 @@ fn main() {
         p.rows = rows;
         p.width_limit = Some(terminal_width);
         p.add_column("id");
+        p.add_column("pri");
         p.add_column("age");
         p.add_column("desc");
         p.add_column("urg");
