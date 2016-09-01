@@ -21,6 +21,7 @@ pub enum Command {
   Add(Title, Tags),
   MarkDone(TaskRef),
   Delete(TaskRef),
+  ChangePriority(TaskRef, Priority),
 }
 
 impl Command {
@@ -37,11 +38,18 @@ impl Command {
     // Try to parse args[0] as TaskRef first
     if let Ok(tr) = TaskRef::from_str(&args[0]) {
       match args.get(1).map(|s| &s[..]) {
-        None           => Ok(Command::Show(tr)),
-        Some("show")   => Ok(Command::Show(tr)),
-        Some("done")   => Ok(Command::MarkDone(tr)),
-        Some("delete") => Ok(Command::Delete(tr)),
-        Some(cmd)      => Err(ParseError(format!("Invalid command '{}'", cmd)))
+        None             => Ok(Command::Show(tr)),
+        Some("show")     => Ok(Command::Show(tr)),
+        Some("done")     => Ok(Command::MarkDone(tr)),
+        Some("delete")   => Ok(Command::Delete(tr)),
+        Some("priority") => {
+          if let Some(priority) = args.get(2).and_then(|s| Priority::from_str(&s).ok()) {
+            Ok(Command::ChangePriority(tr, priority))
+          } else {
+            Err(ParseError("Failed to parse priority".into()))
+          }
+        }
+        Some(cmd)        => Err(ParseError(format!("Invalid command '{}'", cmd)))
       }
     } else {
       // TODO: Simplify when slice_patterns get stabilized

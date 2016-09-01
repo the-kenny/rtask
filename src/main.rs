@@ -114,21 +114,41 @@ fn main() {
             None
           }
         }
+      },
+      Command::ChangePriority(r, p) => {
+        match model.find_task(&r) {
+          Ok(task) => {
+            Some(Effect::ChangeTaskPriority(task.uuid.clone(), p))
+          },
+          Err(TaskNotFound) => {
+            println!("No matching task found");
+            None
+          },
+          Err(MultipleResults) => {
+            println!("Found multiple tasks matching {}", r);
+            None
+          }
+        }
       }
     };
 
     // Print effect descriptions
     if let Some(ref effect) = effect {
+      use rtask::Effect::*;
       match *effect {
-        Effect::AddTask(ref t)       => println!("Added Task '{}'", t.description),
-        Effect::DeleteTask(ref uuid) => println!("Deleted task '{}'", model.tasks[uuid].description),
-        Effect::ChangeTaskState(ref uuid, ref state) => {
+        AddTask(ref t)       => println!("Added Task '{}'", t.description),
+        DeleteTask(ref uuid) => println!("Deleted task '{}'", model.tasks[uuid].description),
+        ChangeTaskState(ref uuid, ref state) => {
           let ref t = model.tasks[uuid];
           match *state {
             TaskState::Done(_) => println!("Marking task '{}' as done", t.description),
             TaskState::Open    => println!("Marking task '{}' as open", t.description),
           }
         },
+        ChangeTaskPriority(ref uuid, ref priority) => {
+          let ref t = model.tasks[uuid];
+          println!("Changing  priority of task '{}' to {}", t.description, priority);
+        }
       }
     }
 
@@ -136,7 +156,7 @@ fn main() {
   } else {
     panic!("Invalid command :-(")
   }
-  
+
   mem::drop(store);
   fs::remove_file(PID_FILE).expect("Failed to remove pid file");
 }

@@ -1,4 +1,5 @@
-use ::{Task, TaskState, Uuid, TaskRef};
+use ::task::*;
+use ::TaskRef;
 use std::collections::{BTreeMap, HashMap};
 
 #[derive(Clone, Debug, PartialEq, Eq,
@@ -8,8 +9,21 @@ pub enum Effect {
   // AddTags(Uuid, Tags),
   // RemoveTags(Uuid, Tags),
   ChangeTaskState(Uuid, TaskState),
+  ChangeTaskPriority(Uuid, Priority),
   DeleteTask(Uuid),
   // Undo,
+}
+
+impl Effect {
+  pub fn task_id<'a>(&'a self) -> Option<&'a Uuid> {
+    use Effect::*;
+    match *self {
+      AddTask(_)                   => None,
+      ChangeTaskState(ref u, _)    => Some(u),
+      ChangeTaskPriority(ref u, _) => Some(u),
+      DeleteTask(ref u)            => Some(u),
+    }
+  }
 }
 
 pub struct Model {
@@ -42,8 +56,9 @@ impl Model {
     use Effect::*;
     match effect.clone() {
       AddTask(task)                => { self.add_task(task); },
+      ChangeTaskState(uuid, state) => { self.change_task_state(&uuid, state); },
+      ChangeTaskPriority(uuid, p)  => { self.change_task_priority(&uuid, p); },
       DeleteTask(uuid)             => { self.delete_task(&uuid); },
-      ChangeTaskState(uuid, state) => { self.change_task_state(&uuid, state); }
     }
 
     self.applied_effects.push(effect);
@@ -64,6 +79,12 @@ impl Model {
     self.tasks.get_mut(u)
       .expect("failed to get task")
       .status = state;
+  }
+
+  fn change_task_priority(&mut self, u: &Uuid, priority: Priority) {
+    self.tasks.get_mut(u)
+      .expect("failed to get task")
+      .priority = priority;
   }
 }
 
@@ -135,7 +156,7 @@ impl Model {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use ::{Task, TaskRef, TaskState};
+  use ::{Task, TaskRef, TaskState, Priority};
   use time;
 
   #[test]
@@ -159,5 +180,16 @@ mod tests {
     let s = TaskState::Done(time::get_time());
     m.change_task_state(&uuid, s);
     assert_eq!(m.tasks[&uuid].status, s);
+  }
+
+  #[test]
+  fn test_change_task_priority() {
+    let mut m = Model::new();
+    let t = Task::new("foo");
+    let uuid = t.uuid.clone();
+    m.add_task(t.clone());
+    assert_eq!(m.tasks[&uuid].priority, Priority::Default);
+    m.change_task_priority(&uuid, Priority::High);
+    assert_eq!(m.tasks[&uuid].priority, Priority::High);
   }
 }

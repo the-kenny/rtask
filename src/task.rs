@@ -42,6 +42,20 @@ impl Into<f32> for Priority {
   }
 }
 
+use std::str::FromStr;
+impl FromStr for Priority {
+  type Err = ();
+  fn from_str(s: &str) -> Result<Self, Self::Err> {
+    match s.to_lowercase().chars().next() {
+      Some('l') => Ok(Priority::Low),
+      Some('m') => Ok(Priority::Default),
+      Some('d') => Ok(Priority::Default),
+      Some('h') => Ok(Priority::High),
+      _         => Err(()),
+    }
+  }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash,
          RustcEncodable, RustcDecodable)]
 pub enum ExtraData {
