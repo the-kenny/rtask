@@ -13,6 +13,82 @@ use std::io::ErrorKind;
 
 pub const PID_FILE: &'static str = "tasks.pid";
 
+#[derive(Debug)]
+enum HandleCommandError {
+  FindTaskError(FindTaskError)
+}
+
+impl From<FindTaskError> for HandleCommandError {
+  fn from(other: FindTaskError) -> Self {
+    HandleCommandError::FindTaskError(other)
+  }
+}
+
+fn handle_command(model: &mut Model, command: Command) -> Result<Option<Effect>, HandleCommandError> {
+  info!("Command: {:?}", command);
+
+  match command {
+    Command::List => {
+      model.recalculate_numerical_ids();
+
+      // TODO: Calculate padding
+      let right_padding = 10 + 8;
+      let terminal_width = terminal_size().columns - right_padding;
+
+
+      // TODO: Find a nicer way to pass a slice of slices of
+      // string-slices
+      let rows: Vec<_> = model.all_tasks().into_iter()
+        .filter(|t| !t.is_done())
+        .map(|task| {
+          let short = model.numerical_ids.get(&task.uuid)
+            .map(u64::to_string)
+            .unwrap_or(task.short_id());
+
+          vec![short,
+               task.priority.to_string(),
+               task.age().to_string(),
+               task.description.clone(),
+               format!("{:.2}", task.urgency())]
+        }).collect();
+
+      use std::io;
+      let mut p = TablePrinter::new();
+      p.rows = rows;
+      p.width_limit = Some(terminal_width);
+      p.add_column("id");
+      p.add_column("pri");
+      p.add_column("age");
+      p.add_column("desc");
+      p.add_column("urg");
+      p.calculate_widths();
+      p.print(&mut io::stdout()).unwrap();
+
+      Ok(None)
+    },
+    Command::Show(r) => {
+      let task = try!(model.find_task(&r));
+      println!("{:?}", task);
+      Ok(None)
+    },
+    Command::Add(title, tags) => {
+      Ok(Some(Effect::AddTask(Task::new_with_tags(&title, tags))))
+    },
+    Command::Delete(r) => {
+      let task = try!(model.find_task(&r));
+      Ok(Some(Effect::DeleteTask(task.uuid.clone())))
+    },
+    Command::MarkDone(r) => {
+      let task = try!(model.find_task(&r));
+      Ok(Some(Effect::ChangeTaskState(task.uuid.clone(), TaskState::Done(time::get_time()))))
+    },
+    Command::ChangePriority(r, p) => {
+      let task = try!(model.find_task(&r));
+      Ok(Some(Effect::ChangeTaskPriority(task.uuid.clone(), p)))
+    },
+  }
+}
+
 fn main() {
   env_logger::init().unwrap();
 
@@ -28,108 +104,8 @@ fn main() {
     println!("Error while parsing command: {}", e.0);
     return;
   } else if let Ok(command) = command {
-    info!("Command: {:?}", command);
-
-    let model = store.model();
-
-    use rtask::FindTaskError::*;
-    let effect = match command {
-      Command::List => {
-        model.recalculate_numerical_ids();
-
-        // TODO: Calculate padding
-        let right_padding = 10 + 8;
-        let terminal_width = terminal_size().columns - right_padding;
-
-
-        // TODO: Find a nicer way to pass a slice of slices of
-        // string-slices
-        let rows: Vec<_> = model.all_tasks().into_iter()
-          .filter(|t| !t.is_done())
-          .map(|task| {
-            let short = model.numerical_ids.get(&task.uuid)
-              .map(u64::to_string)
-              .unwrap_or(task.short_id());
-
-            vec![short,
-                 task.priority.to_string(),
-                 task.age().to_string(),
-                 task.description.clone(),
-                 format!("{:.2}", task.urgency())]
-          }).collect();
-
-        use std::io;
-        let mut p = TablePrinter::new();
-        p.rows = rows;
-        p.width_limit = Some(terminal_width);
-        p.add_column("id");
-        p.add_column("pri");
-        p.add_column("age");
-        p.add_column("desc");
-        p.add_column("urg");
-        p.calculate_widths();
-        p.print(&mut io::stdout()).unwrap();
-
-        None
-      },
-      Command::Show(r) => {
-        match model.find_task(&r) {
-          Ok(task)             => println!("{:?}", task),
-          Err(TaskNotFound)    => println!("Found no tasks matching {}", r),
-          Err(MultipleResults) => println!("Found multiple tasks matching {}", r),
-        }
-
-        None
-      },
-      Command::Add(title, tags) => {
-        Some(Effect::AddTask(Task::new_with_tags(&title, tags)))
-      },
-      Command::Delete(r) => {
-        match model.find_task(&r) {
-          Ok(task) => {
-            Some(Effect::DeleteTask(task.uuid.clone()))
-          },
-          Err(TaskNotFound) => {
-            println!("No matching task found");
-            None
-          },
-          Err(MultipleResults) => {
-            println!("Found multiple tasks matching {}", r);
-            None
-          }
-        }
-      },
-      Command::MarkDone(r) => {
-        match model.find_task(&r) {
-          Ok(task) => {
-            Some(Effect::ChangeTaskState(task.uuid.clone(), TaskState::Done(time::get_time())))
-          },
-          Err(TaskNotFound) => {
-            println!("No matching task found");
-            None
-          },
-          Err(MultipleResults) => {
-            println!("Found multiple tasks matching {}", r);
-            None
-          }
-        }
-      },
-      Command::ChangePriority(r, p) => {
-        match model.find_task(&r) {
-          Ok(task) => {
-            Some(Effect::ChangeTaskPriority(task.uuid.clone(), p))
-          },
-          Err(TaskNotFound) => {
-            println!("No matching task found");
-            None
-          },
-          Err(MultipleResults) => {
-            println!("Found multiple tasks matching {}", r);
-            None
-          }
-        }
-      }
-    };
+    let mut model = store.model();
+    let effect = handle_command(&mut model, command).unwrap(); // TODO
 
     // Print effect descriptions
     if let Some(ref effect) = effect {
@@ -151,6 +127,7 @@ fn main() {
       }
     }
 
+    
     effect.map(|e| model.apply_effect(e));
   } else {
     panic!("Invalid command :-(")
