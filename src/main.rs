@@ -33,7 +33,6 @@ fn main() {
     let model = store.model();
 
     use rtask::FindTaskError::*;
-
     let effect = match command {
       Command::List => {
         model.recalculate_numerical_ids();
@@ -42,7 +41,6 @@ fn main() {
         let right_padding = 10 + 8;
         let terminal_width = terminal_size().columns - right_padding;
 
-        use std::io;
 
         // TODO: Find a nicer way to pass a slice of slices of
         // string-slices
@@ -60,6 +58,7 @@ fn main() {
                  format!("{:.2}", task.urgency())]
           }).collect();
 
+        use std::io;
         let mut p = TablePrinter::new();
         p.rows = rows;
         p.width_limit = Some(terminal_width);

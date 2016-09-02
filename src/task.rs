@@ -35,9 +35,9 @@ impl Default for Priority {
 impl Into<f32> for Priority {
   fn into(self) -> f32 {
     match self {
-      Priority::Low     => -10.0,
+      Priority::Low     => -5.0,
       Priority::Default =>   0.0,
-      Priority::High    =>  10.0,
+      Priority::High    =>  5.0,
     }
   }
 }

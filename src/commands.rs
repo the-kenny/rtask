@@ -30,6 +30,17 @@ impl Command {
     Self::from_vec(&args)
   }
 
+  pub fn task_ref<'a>(&'a self) -> Option<&'a TaskRef> {
+    use self::Command::*;
+    match *self {
+      Show(ref r)                => Some(r),
+      MarkDone(ref r)            => Some(r),
+      Delete(ref r)              => Some(r),
+      ChangePriority(ref r, _)   => Some(r),
+      _                          => None
+    }
+  }
+
   fn from_vec(args: &Vec<String>) -> Result<Self, ParseError> {
     if args.len() == 0 {
       return Ok(Command::List)
@@ -49,7 +60,7 @@ impl Command {
             Err(ParseError("Failed to parse priority".into()))
           }
         }
-        Some(cmd)        => Err(ParseError(format!("Invalid command '{}'", cmd)))
+        Some(cmd) => Err(ParseError(format!("Invalid command '{}'", cmd)))
       }
     } else {
       // TODO: Simplify when slice_patterns get stabilized
