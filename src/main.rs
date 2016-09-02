@@ -24,17 +24,14 @@ impl From<FindTaskError> for HandleCommandError {
   }
 }
 
-fn handle_command(model: &mut Model, command: Command) -> Result<Option<Effect>, HandleCommandError> {
+fn command_to_effect(model: &Model, command: Command) -> Result<Option<Effect>, HandleCommandError> {
   info!("Command: {:?}", command);
 
   match command {
     Command::List => {
-      model.recalculate_numerical_ids();
-
       // TODO: Calculate padding
       let right_padding = 10 + 8;
       let terminal_width = terminal_size().columns - right_padding;
-
 
       // TODO: Find a nicer way to pass a slice of slices of
       // string-slices
@@ -105,7 +102,12 @@ fn main() {
     return;
   } else if let Ok(command) = command {
     let mut model = store.model();
-    let effect = handle_command(&mut model, command).unwrap(); // TODO
+
+    if command.should_recalculate_ids() {
+      model.recalculate_numerical_ids();
+    }
+
+    let effect = command_to_effect(&mut model, command).unwrap(); // TODO
 
     // Print effect descriptions
     if let Some(ref effect) = effect {
@@ -127,7 +129,7 @@ fn main() {
       }
     }
 
-    
+
     effect.map(|e| model.apply_effect(e));
   } else {
     panic!("Invalid command :-(")

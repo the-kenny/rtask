@@ -41,6 +41,10 @@ impl Command {
     }
   }
 
+  pub fn should_recalculate_ids(&self) -> bool {
+    *self == Command::List
+  }
+
   fn from_vec(args: &Vec<String>) -> Result<Self, ParseError> {
     if args.len() == 0 {
       return Ok(Command::List)
