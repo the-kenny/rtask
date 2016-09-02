@@ -8,7 +8,7 @@ use rtask::*;
 use rtask::commands::Command;
 use rtask::terminal_size::*;
 
-use std::{fs,mem};
+use std::fs;
 use std::io::ErrorKind;
 
 pub const PID_FILE: &'static str = "tasks.pid";
@@ -88,54 +88,53 @@ fn command_to_effect(model: &Model, command: Command) -> Result<Option<Effect>, 
 
 fn main() {
   env_logger::init().unwrap();
-
   chdir();
-  let _lock = FileLock::new(PID_FILE)
-    .expect("Failed to acquire lock");
+  
+  let _lock = FileLock::new(PID_FILE).expect("Failed to acquire lock");
+  
+  {
+    let mut store = Storage::new().expect("Failed to open store");
+    let command = Command::from_args();
 
-  let mut store = Storage::new().expect("Failed to open store");
+    if let Err(e) = command {
+      println!("Error while parsing command: {}", e.0);
+      return;
+    } else if let Ok(command) = command {
+      let mut model = store.model();
 
-  let command = Command::from_args();
+      if command.should_recalculate_ids() {
+        model.recalculate_numerical_ids();
+      }
 
-  if let Err(e) = command {
-    println!("Error while parsing command: {}", e.0);
-    return;
-  } else if let Ok(command) = command {
-    let mut model = store.model();
+      let effect = command_to_effect(&mut model, command).unwrap(); // TODO
 
-    if command.should_recalculate_ids() {
-      model.recalculate_numerical_ids();
-    }
-
-    let effect = command_to_effect(&mut model, command).unwrap(); // TODO
-
-    // Print effect descriptions
-    if let Some(ref effect) = effect {
-      use rtask::Effect::*;
-      match *effect {
-        AddTask(ref t)       => println!("Added Task '{}'", t.description),
-        DeleteTask(ref uuid) => println!("Deleted task '{}'", model.tasks[uuid].description),
-        ChangeTaskState(ref uuid, ref state) => {
-          let ref t = model.tasks[uuid];
-          match *state {
-            TaskState::Done(_) => println!("Marking task '{}' as done", t.description),
-            TaskState::Open    => println!("Marking task '{}' as open", t.description),
+      // Print effect descriptions
+      if let Some(ref effect) = effect {
+        use rtask::Effect::*;
+        match *effect {
+          AddTask(ref t)       => println!("Added Task '{}'", t.description),
+          DeleteTask(ref uuid) => println!("Deleted task '{}'", model.tasks[uuid].description),
+          ChangeTaskState(ref uuid, ref state) => {
+            let ref t = model.tasks[uuid];
+            match *state {
+              TaskState::Done(_) => println!("Marking task '{}' as done", t.description),
+              TaskState::Open    => println!("Marking task '{}' as open", t.description),
+            }
+          },
+          ChangeTaskPriority(ref uuid, ref priority) => {
+            let ref t = model.tasks[uuid];
+            println!("Changing  priority of task '{}' to {}", t.description, priority);
           }
-        },
-        ChangeTaskPriority(ref uuid, ref priority) => {
-          let ref t = model.tasks[uuid];
-          println!("Changing  priority of task '{}' to {}", t.description, priority);
         }
       }
+
+
+      effect.map(|e| model.apply_effect(e));
+    } else {
+      panic!("Invalid command :-(")
     }
-
-
-    effect.map(|e| model.apply_effect(e));
-  } else {
-    panic!("Invalid command :-(")
   }
 
-  mem::drop(store);
   fs::remove_file(PID_FILE).expect("Failed to remove pid file");
 }
 
