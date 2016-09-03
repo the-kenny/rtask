@@ -3,11 +3,11 @@ use uuid;
 
 use std::collections::{HashMap, HashSet};
 
-pub type Title = String;
-pub type Time = time::Timespec;
-pub type Uuid = uuid::Uuid;
-pub type Tag = String;
-pub type Tags = HashSet<Tag>;
+pub type Title    = String;
+pub type Time     = time::Timespec;
+pub type Uuid     = uuid::Uuid;
+pub type Tag      = String;
+pub type Tags     = HashSet<Tag>;
 pub type ExtraMap = HashMap<ExtraData, String>;
 
 pub struct Age(time::Duration);
@@ -36,7 +36,7 @@ impl Into<f32> for Priority {
   fn into(self) -> f32 {
     match self {
       Priority::Low     => -5.0,
-      Priority::Default =>   0.0,
+      Priority::Default =>  0.0,
       Priority::High    =>  5.0,
     }
   }
@@ -65,13 +65,13 @@ pub enum ExtraData {
 #[derive(Clone, Debug, PartialEq, Eq, RustcEncodable)]
 pub struct Task {
   pub description: Title,
-  pub status: TaskState,
-  pub priority: Priority,
-  pub created: Time,
-  pub modified: Time,
-  pub uuid: Uuid,
-  pub tags: Tags,
-  pub extras: ExtraMap,
+  pub status:      TaskState,
+  pub priority:    Priority,
+  pub created:     Time,
+  pub modified:    Time,
+  pub uuid:        Uuid,
+  pub tags:        Tags,
+  pub extras:      ExtraMap,
 }
 
 impl Task {
@@ -121,14 +121,6 @@ impl Task {
       TaskState::Open    => false,
     }
   }
-
-  // pub fn mark_done(&mut self) {
-  //   use self::TaskState::*;
-  //   match self.status {
-  //     Open => self.status = Done(time::get_time()),
-  //     _ => ()
-  //   }
-  // }
 }
 
 use rustc_serialize::{Decoder,Decodable};
