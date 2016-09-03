@@ -75,11 +75,13 @@ impl<'a, S: AsRef<str>> TablePrinter<'a, S> {
     try!(write!(writer, "\n"));
 
     for (nrow, row) in self.rows.iter().enumerate() {
-      let style = if nrow % 2 == 0 {
-        Style::default().on(Colour::RGB(60,60,60))
+      let background = if nrow % 2 == 0 {
+        Colour::RGB(40,40,40)
       } else {
-        Style::default()
+        Colour::Black
       };
+
+      let style = Style::default().on(background);
 
       for (n, text) in row.iter().enumerate() {
         let width = self.widths[n];
