@@ -92,8 +92,13 @@ impl Command {
       // TODO: Simplify when slice_patterns get stabilized
       match args[0].as_ref() {
         "list" => {
-          let tags: Tags = args.iter().skip(1).filter_map(|s| s.as_tag()).collect();
-          Ok(Command::List(tags))
+          let tags: Option<Tags> = args.iter().skip(1).map(|s| s.as_tag()).collect();
+          println!("tags: {:?}", tags);
+          match tags {
+            Some(tags) => Ok(Command::List(tags)),
+            None       => Err(ParseError(format!("Invalid arguments"))),
+          }
+
         },
         "show" if args.len() == 2 => {
           try!(TaskRef::from_str(&args[1]).map(Command::Show).map(Ok))
@@ -132,11 +137,16 @@ impl Command {
 mod tests {
   use super::*;
   use ::task::*;
+  use std::iter::FromIterator;
 
   #[test]
   fn test_list() {
     let c = Command::from_vec(&vec!["list".to_string()]);
-    assert_eq!(c, Ok(Command::List));
+    assert_eq!(c, Ok(Command::List(Tags::new())));
+
+    let c = Command::from_vec(&vec!["list".to_string(),
+                                    "tag:foo".to_string()]);
+    assert_eq!(c, Ok(Command::List(Tags::from_iter(vec!["foo".into()]))));
 
     let c = Command::from_vec(&vec!["list".to_string(),
                                     "unimplemented_filter".to_string()]);
@@ -184,6 +194,6 @@ mod tests {
   #[test]
   fn test_default() {
     let c = Command::from_vec(&vec![]);
-    assert_eq!(c, Ok(Command::List));
+    assert_eq!(c, Ok(Command::List(Tags::new())));
   }
 }
