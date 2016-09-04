@@ -11,6 +11,8 @@ use rtask::terminal_size::*;
 use std::fs;
 use std::io::ErrorKind;
 
+const LIST_PRINT_LIMIT: usize = 10;
+
 pub const PID_FILE: &'static str = "tasks.pid";
 
 #[derive(Debug)]
@@ -40,9 +42,13 @@ fn command_to_effect(model: &Model, command: Command) -> Result<Option<Effect>, 
       // TODO: Calculate padding
       let right_padding = 10 + 8;
       let terminal_width = terminal_size().columns - right_padding;
-      let rows: Vec<_> = model.all_tasks().into_iter()
+
+      let filtered_tasks: Vec<_> = model.all_tasks().into_iter()
         .filter(|t| !t.is_done())
         .filter(|t| tags.is_empty() || tags.is_subset(&t.tags))
+        .collect();
+
+      let rows: Vec<_> = filtered_tasks.iter()
         .enumerate()
         .map(|(n, task)| {
           let short = model.numerical_ids.get(&task.uuid)
@@ -67,7 +73,7 @@ fn command_to_effect(model: &Model, command: Command) -> Result<Option<Effect>, 
             fields: values,
             style: Some(style),
           }
-        }).collect();
+        }).take(LIST_PRINT_LIMIT).collect();
 
       if !rows.is_empty() {
         use std::io;
@@ -75,6 +81,10 @@ fn command_to_effect(model: &Model, command: Command) -> Result<Option<Effect>, 
         p.width_limit = Some(terminal_width);
         p.titles = vec!["id", "pri", "age", "desc", "urg"];
         p.print(&mut io::stdout(), &rows).unwrap();
+
+        if filtered_tasks.len() > rows.len() {
+          println!("There are {} more tasks", filtered_tasks.len() - rows.len());
+        }
       } else {
         println!("No matching tasks found");
       }
