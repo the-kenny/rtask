@@ -103,42 +103,43 @@ fn main() {
     let mut store = Storage::new().expect("Failed to open store");
     let command = Command::from_args();
 
-    if let Err(e) = command {
-      println!("Error while parsing command: {}", e.0);
-      return;
-    } else if let Ok(command) = command {
-      let mut model = store.model();
+    match command {
+      Err(e) => {
+        println!("Error while parsing command: {}", e.0);
+        return;
+      },
+      Ok(command) => {
+        let mut model = store.model();
 
-      if command.should_recalculate_ids() {
-        model.recalculate_numerical_ids();
-      }
+        if command.should_recalculate_ids() {
+          model.recalculate_numerical_ids();
+        }
 
-      let effect = command_to_effect(&mut model, command).unwrap(); // TODO
+        let effect = command_to_effect(&mut model, command).unwrap(); // TODO
 
-      // Print effect descriptions
-      if let Some(ref effect) = effect {
-        use rtask::Effect::*;
-        match *effect {
-          AddTask(ref t)       => println!("Added Task '{}'", t.description),
-          DeleteTask(ref uuid) => println!("Deleted task '{}'", model.tasks[uuid].description),
-          ChangeTaskState(ref uuid, ref state) => {
-            let ref t = model.tasks[uuid];
-            match *state {
-              TaskState::Done(_) => println!("Marking task '{}' as done", t.description),
-              TaskState::Open    => println!("Marking task '{}' as open", t.description),
+        // Print effect descriptions
+        if let Some(ref effect) = effect {
+          use rtask::Effect::*;
+          match *effect {
+            AddTask(ref t)       => println!("Added Task '{}'", t.description),
+            DeleteTask(ref uuid) => println!("Deleted task '{}'", model.tasks[uuid].description),
+            ChangeTaskState(ref uuid, ref state) => {
+              let ref t = model.tasks[uuid];
+              match *state {
+                TaskState::Done(_) => println!("Marking task '{}' as done", t.description),
+                TaskState::Open    => println!("Marking task '{}' as open", t.description),
+              }
+            },
+            ChangeTaskPriority(ref uuid, ref priority) => {
+              let ref t = model.tasks[uuid];
+              println!("Changing  priority of task '{}' to {}", t.description, priority);
             }
-          },
-          ChangeTaskPriority(ref uuid, ref priority) => {
-            let ref t = model.tasks[uuid];
-            println!("Changing  priority of task '{}' to {}", t.description, priority);
           }
         }
-      }
 
 
-      effect.map(|e| model.apply_effect(e));
-    } else {
-      panic!("Invalid command :-(")
+        effect.map(|e| model.apply_effect(e));
+      },
     }
   }
 
