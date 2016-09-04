@@ -89,7 +89,6 @@ impl Command {
       match args.get(0).map(|s| s.as_ref()) {
         None | Some("list") => {
           let tags: Option<Tags> = args.iter().skip(1).map(|s| s.as_tag()).collect();
-          println!("tags: {:?}", tags);
           match tags {
             Some(tags) => Ok(Command::List(tags)),
             None       => Err(ParseError(format!("Invalid arguments"))),
