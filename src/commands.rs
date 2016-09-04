@@ -50,12 +50,9 @@ impl Command {
   }
 
   fn from_vec(args: &Vec<String>) -> Result<Self, ParseError> {
-    if args.len() == 0 {
-      return Ok(Command::List(Tags::new()))
-    }
     // Try to parse args[0] as TaskRef first
-    if let Ok(tr) = TaskRef::from_str(&args[0]) {
-      match args.get(1).map(|s| &s[..]) {
+    if let Some(tr) = args.get(0).and_then(|s| TaskRef::from_str(s).ok()) {
+      match args.get(1).map(|s| s.as_ref()) {
         None             => Ok(Command::Show(tr)),
         Some("show")     => Ok(Command::Show(tr)),
         Some("done")     => Ok(Command::MarkDone(tr)),
@@ -89,9 +86,8 @@ impl Command {
         Some(cmd) => Err(ParseError(format!("Invalid command '{}'", cmd)))
       }
     } else {
-      // TODO: Simplify when slice_patterns get stabilized
-      match args[0].as_ref() {
-        "list" => {
+      match args.get(0).map(|s| s.as_ref()) {
+        None | Some("list") => {
           let tags: Option<Tags> = args.iter().skip(1).map(|s| s.as_tag()).collect();
           println!("tags: {:?}", tags);
           match tags {
@@ -100,11 +96,7 @@ impl Command {
           }
 
         },
-        "show" if args.len() == 2 => {
-          try!(TaskRef::from_str(&args[1]).map(Command::Show).map(Ok))
-        },
-        "show" => Err(ParseError("Invalid arguments".into())),
-        "add" => {
+        Some("add") => {
           let params = args.iter().skip(1);
 
           let tags: Tags = Tags::from_iter(
@@ -127,7 +119,7 @@ impl Command {
             Err(ParseError("Failed to parse parameters".into()))
           }
         },
-        v => Err(ParseError(format!("Unknown command {}", v)))
+        Some(v) => Err(ParseError(format!("Unknown command {}", v)))
       }
     }
   }
