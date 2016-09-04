@@ -29,37 +29,44 @@ fn command_to_effect(model: &Model, command: Command) -> Result<Option<Effect>, 
 
   match command {
     Command::List => {
+      use rtask::printer::*;
+
       // TODO: Calculate padding
       let right_padding = 10 + 8;
       let terminal_width = terminal_size().columns - right_padding;
-
-      // TODO: Find a nicer way to pass a slice of slices of
-      // string-slices
       let rows: Vec<_> = model.all_tasks().into_iter()
         .filter(|t| !t.is_done())
-        .map(|task| {
+        .enumerate()
+        .map(|(n, task)| {
           let short = model.numerical_ids.get(&task.uuid)
             .map(u64::to_string)
             .unwrap_or(task.short_id());
 
-          vec![short,
-               task.priority.to_string(),
-               task.age().to_string(),
-               task.description.clone(),
-               format!("{:.2}", task.urgency())]
+          let values = vec![short,
+                            task.priority.to_string(),
+                            task.age().to_string(),
+                            task.description.clone(),
+                            format!("{:.2}", task.urgency())];
+
+          let mut style = Style::default();
+          if n % 2 == 0 { style = style.on(Colour::RGB(40,40,40)) };
+          style = match task.priority {
+            Priority::High => style.fg(Colour::RGB(250,50,50)),
+            Priority::Low  => style.fg(Colour::RGB(150,150,150)),
+            _ => style
+          };
+
+          PrintRow {
+            fields: values,
+            style: Some(style),
+          }
         }).collect();
 
       use std::io;
       let mut p = TablePrinter::new();
-      p.rows = rows;
       p.width_limit = Some(terminal_width);
-      p.add_column("id");
-      p.add_column("pri");
-      p.add_column("age");
-      p.add_column("desc");
-      p.add_column("urg");
-      p.calculate_widths();
-      p.print(&mut io::stdout()).unwrap();
+      p.titles = vec!["id", "pri", "age", "desc", "urg"];
+      p.print(&mut io::stdout(), &rows).unwrap();
 
       Ok(None)
     },
@@ -89,9 +96,9 @@ fn command_to_effect(model: &Model, command: Command) -> Result<Option<Effect>, 
 fn main() {
   env_logger::init().unwrap();
   chdir();
-  
+
   let _lock = FileLock::new(PID_FILE).expect("Failed to acquire lock");
-  
+
   {
     let mut store = Storage::new().expect("Failed to open store");
     let command = Command::from_args();
