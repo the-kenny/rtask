@@ -144,6 +144,10 @@ fn main() {
           match *effect {
             AddTask(ref t)       => println!("Added Task '{}'", t.description),
             DeleteTask(ref uuid) => println!("Deleted task '{}'", model.tasks[uuid].description),
+            ChangeTaskTags{ ref added, ref removed, ..} => {
+              if !added.is_empty()   { println!("Added tags {:?}",   added); }
+              if !removed.is_empty() { println!("Removed tags {:?}", removed); }
+            }
             ChangeTaskState(ref uuid, ref state) => {
               let ref t = model.tasks[uuid];
               match *state {

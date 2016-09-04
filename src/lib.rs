@@ -23,8 +23,6 @@ pub use file_lock::FileLock;
 pub mod storage_engine;
 pub use storage_engine::*;
 
-pub use printer::TablePrinter;
-
 mod sqlite_storage;
 
 pub type Storage = sqlite_storage::SqliteStorage;

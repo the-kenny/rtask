@@ -6,8 +6,7 @@ use std::collections::{BTreeMap, HashMap};
          RustcEncodable, RustcDecodable)]
 pub enum Effect {
   AddTask(Task),
-  // AddTags(Uuid, Tags),
-  // RemoveTags(Uuid, Tags),
+  ChangeTaskTags { uuid: Uuid, added: Tags, removed: Tags },
   ChangeTaskState(Uuid, TaskState),
   ChangeTaskPriority(Uuid, Priority),
   DeleteTask(Uuid),
@@ -18,10 +17,11 @@ impl Effect {
   pub fn task_id<'a>(&'a self) -> Option<&'a Uuid> {
     use Effect::*;
     match *self {
-      AddTask(_)                   => None,
-      ChangeTaskState(ref u, _)    => Some(u),
-      ChangeTaskPriority(ref u, _) => Some(u),
-      DeleteTask(ref u)            => Some(u),
+      AddTask(_)                     => None,
+      ChangeTaskTags{ ref uuid, .. } => Some(uuid),
+      ChangeTaskState(ref u, _)      => Some(u),
+      ChangeTaskPriority(ref u, _)   => Some(u),
+      DeleteTask(ref u)              => Some(u),
     }
   }
 }
@@ -55,10 +55,11 @@ impl Model {
   pub fn apply_effect(&mut self, effect: Effect) -> () {
     use Effect::*;
     match effect.clone() {
-      AddTask(task)                => { self.add_task(task); },
-      ChangeTaskState(uuid, state) => { self.change_task_state(&uuid, state); },
-      ChangeTaskPriority(uuid, p)  => { self.change_task_priority(&uuid, p); },
-      DeleteTask(uuid)             => { self.delete_task(&uuid); },
+      AddTask(task)                          => { self.add_task(task); },
+      ChangeTaskTags{ uuid, added, removed } => { self.change_task_tags(&uuid, added, removed); },
+      ChangeTaskState(uuid, state)           => { self.change_task_state(&uuid, state); },
+      ChangeTaskPriority(uuid, p)            => { self.change_task_priority(&uuid, p); },
+      DeleteTask(uuid)                       => { self.delete_task(&uuid); },
     }
 
     self.applied_effects.push(effect);
@@ -86,6 +87,16 @@ impl Model {
       .expect("failed to get task")
       .priority = priority;
   }
+
+  fn change_task_tags(&mut self, u: &Uuid, added: Tags, removed: Tags) {
+    let ref mut tags = self.tasks.get_mut(u)
+      .expect("failed to get task")
+      .tags;
+
+    for t in removed { tags.remove(&t); };
+    for t in added   { tags.insert(t);  };
+  }
+
 }
 
 // Numerical-ID Handling
