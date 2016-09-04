@@ -111,6 +111,14 @@ fn command_to_effect(model: &Model, command: Command) -> Result<Option<Effect>, 
       let task = try!(model.find_task(&r));
       Ok(Some(Effect::ChangeTaskPriority(task.uuid.clone(), p)))
     },
+    Command::ChangeTags{ task_ref, added, removed } => {
+      let task = try!(model.find_task(&task_ref));
+      Ok(Some(Effect::ChangeTaskTags{
+        uuid: task.uuid.clone(),
+        added: added,
+        removed: removed,
+      }))
+    }
   }
 }
 

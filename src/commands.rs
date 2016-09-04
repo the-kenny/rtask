@@ -22,6 +22,7 @@ pub enum Command {
   MarkDone(TaskRef),
   Delete(TaskRef),
   ChangePriority(TaskRef, Priority),
+  ChangeTags{ task_ref: TaskRef, added: Tags, removed: Tags},
 }
 
 impl Command {
@@ -65,6 +66,25 @@ impl Command {
           } else {
             Err(ParseError("Failed to parse priority".into()))
           }
+        },
+        Some("tag") => {
+          let mut added   = Tags::new();
+          let mut removed = Tags::new();
+          for mut t in args.iter().skip(2).cloned() {
+            if t.starts_with("+") {
+              t.remove(0); added.insert(t);
+            } else if t.starts_with("-") {
+              t.remove(0); removed.insert(t);
+            } else {
+              return Err(ParseError(format!("Usage: <task-ref> tag +foo -bar")))
+            }
+          }
+
+          Ok(Command::ChangeTags{
+            task_ref: tr,
+            added: added,
+            removed: removed,
+          })
         }
         Some(cmd) => Err(ParseError(format!("Invalid command '{}'", cmd)))
       }
