@@ -28,14 +28,21 @@ fn command_to_effect(model: &Model, command: Command) -> Result<Option<Effect>, 
   info!("Command: {:?}", command);
 
   match command {
-    Command::List => {
+    Command::List(ref tags) => {
       use rtask::printer::*;
+
+      info!("Listing filtered by tags {:?}", tags);
+
+      if !tags.is_empty() {
+        println!("Listing all tasks with tag(s) {:?}", tags);
+      }
 
       // TODO: Calculate padding
       let right_padding = 10 + 8;
       let terminal_width = terminal_size().columns - right_padding;
       let rows: Vec<_> = model.all_tasks().into_iter()
         .filter(|t| !t.is_done())
+        .filter(|t| tags.is_empty() || tags.is_subset(&t.tags))
         .enumerate()
         .map(|(n, task)| {
           let short = model.numerical_ids.get(&task.uuid)
@@ -62,11 +69,15 @@ fn command_to_effect(model: &Model, command: Command) -> Result<Option<Effect>, 
           }
         }).collect();
 
-      use std::io;
-      let mut p = TablePrinter::new();
-      p.width_limit = Some(terminal_width);
-      p.titles = vec!["id", "pri", "age", "desc", "urg"];
-      p.print(&mut io::stdout(), &rows).unwrap();
+      if !rows.is_empty() {
+        use std::io;
+        let mut p = TablePrinter::new();
+        p.width_limit = Some(terminal_width);
+        p.titles = vec!["id", "pri", "age", "desc", "urg"];
+        p.print(&mut io::stdout(), &rows).unwrap();
+      } else {
+        println!("No matching tasks found");
+      }
 
       Ok(None)
     },

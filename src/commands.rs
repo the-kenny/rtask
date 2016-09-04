@@ -16,7 +16,7 @@ impl From<TaskRefError> for ParseError {
 
 #[derive(PartialEq, Eq, Debug)]
 pub enum Command {
-  List,
+  List(Tags),
   Show(TaskRef),
   Add(Title, Tags),
   MarkDone(TaskRef),
@@ -42,14 +42,16 @@ impl Command {
   }
 
   pub fn should_recalculate_ids(&self) -> bool {
-    *self == Command::List
+    match *self {
+      Command::List(_) => true,
+      _ => false
+    }
   }
 
   fn from_vec(args: &Vec<String>) -> Result<Self, ParseError> {
     if args.len() == 0 {
-      return Ok(Command::List)
+      return Ok(Command::List(Tags::new()))
     }
-
     // Try to parse args[0] as TaskRef first
     if let Ok(tr) = TaskRef::from_str(&args[0]) {
       match args.get(1).map(|s| &s[..]) {
@@ -69,14 +71,10 @@ impl Command {
     } else {
       // TODO: Simplify when slice_patterns get stabilized
       match args[0].as_ref() {
-        "list" if args.len() == 1 => {
-          if args.len() > 1 {
-            Err(ParseError("Too many arguments to `list`".into()))
-          } else {
-            Ok(Command::List)
-          }
+        "list" => {
+          let tags: Tags = args.iter().skip(1).filter_map(|s| s.as_tag()).collect();
+          Ok(Command::List(tags))
         },
-        "list" => Err(ParseError("Invalid arguments".into())),
         "show" if args.len() == 2 => {
           try!(TaskRef::from_str(&args[1]).map(Command::Show).map(Ok))
         },
@@ -97,7 +95,7 @@ impl Command {
             .to_string();
 
           if title != "" {
-            info!("title: {:?}, tags: {:?}", title, tags);
+            debug!("title: {:?}, tags: {:?}", title, tags);
 
             Ok(Command::Add(title, tags))
           } else {
