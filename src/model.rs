@@ -27,6 +27,7 @@ impl Effect {
 }
 
 pub struct Model {
+  // TODO: hide `tasks` and add `archived_tasks`
   pub tasks: HashMap<Uuid, Task>,
   pub applied_effects: Vec<Effect>,
   pub numerical_ids: BTreeMap<Uuid, u64>,
@@ -101,16 +102,14 @@ impl Model {
 
 // Numerical-ID Handling
 impl Model {
-  pub fn recalculate_numerical_ids(&mut self) {
-    debug!("Recalculating numerical-ids");
+  pub fn recalculate_numerical_ids(&mut self, task_ids: &[Uuid]) {
+    info!("Recalculating numerical-ids");
 
     self.is_dirty = true;
 
-    // TODO: Caller should decide which Tasks to index
-    self.numerical_ids = self.all_tasks().into_iter()
-      .filter(|t| !t.is_done())
+    self.numerical_ids = task_ids.iter()
       .enumerate()
-      .map(|(n, t)| (t.uuid.clone(), (n as u64)+1))
+      .map(|(n, uuid)| (uuid.clone(), (n as u64)+1))
       .collect();
   }
 }

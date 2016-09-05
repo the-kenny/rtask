@@ -26,7 +26,7 @@ impl From<FindTaskError> for HandleCommandError {
   }
 }
 
-fn command_to_effect(model: &Model, command: Command) -> Result<Option<Effect>, HandleCommandError> {
+fn command_to_effect(model: &mut Model, command: Command) -> Result<Option<Effect>, HandleCommandError> {
   info!("Command: {:?}", command);
 
   match command {
@@ -39,13 +39,21 @@ fn command_to_effect(model: &Model, command: Command) -> Result<Option<Effect>, 
         println!("Listing all tasks with tag(s) {:?}", tags);
       }
 
+      let task_ids: Vec<_> = model.all_tasks().into_iter()
+        .filter(|t| !t.is_done())
+        .filter(|t| tags.is_empty() || tags.is_subset(&t.tags))
+        .map(|t| t.uuid)
+        .collect();
+
+      // Recalculate IDs
+      model.recalculate_numerical_ids(&task_ids[..]);
+
       // TODO: Calculate padding
       let right_padding = 10 + 8;
       let terminal_width = terminal_size().columns - right_padding;
 
-      let filtered_tasks: Vec<_> = model.all_tasks().into_iter()
-        .filter(|t| !t.is_done())
-        .filter(|t| tags.is_empty() || tags.is_subset(&t.tags))
+      let filtered_tasks: Vec<_> = task_ids.iter()
+        .map(|uuid| model.tasks.get(uuid).unwrap())
         .collect();
 
       let rows: Vec<_> = filtered_tasks.iter()
@@ -139,11 +147,6 @@ fn main() {
       },
       Ok(command) => {
         let mut model = store.model();
-
-        if command.should_recalculate_ids() {
-          model.recalculate_numerical_ids();
-        }
-
         let effect = command_to_effect(&mut model, command).unwrap(); // TODO
 
         // Print effect descriptions
