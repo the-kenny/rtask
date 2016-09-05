@@ -28,7 +28,7 @@ pub enum Command {
 impl Command {
   pub fn from_args() -> Result<Self, ParseError> {
     let args: Vec<String> = env::args().skip(1).collect();
-    Self::from_vec(&args)
+    Self::from_slice(&args)
   }
 
   pub fn task_ref<'a>(&'a self) -> Option<&'a TaskRef> {
@@ -49,7 +49,7 @@ impl Command {
     }
   }
 
-  fn from_vec(args: &Vec<String>) -> Result<Self, ParseError> {
+  fn from_slice(args: &[String]) -> Result<Self, ParseError> {
     // Try to parse args[0] as TaskRef first
     if let Some(tr) = args.get(0).and_then(|s| TaskRef::from_str(s).ok()) {
       match args.get(1).map(|s| s.as_ref()) {
@@ -132,14 +132,14 @@ mod tests {
 
   #[test]
   fn test_list() {
-    let c = Command::from_vec(&vec!["list".to_string()]);
+    let c = Command::from_slice(&vec!["list".to_string()]);
     assert_eq!(c, Ok(Command::List(Tags::new())));
 
-    let c = Command::from_vec(&vec!["list".to_string(),
+    let c = Command::from_slice(&vec!["list".to_string(),
                                     "tag:foo".to_string()]);
     assert_eq!(c, Ok(Command::List(Tags::from_iter(vec!["foo".into()]))));
 
-    let c = Command::from_vec(&vec!["list".to_string(),
+    let c = Command::from_slice(&vec!["list".to_string(),
                                     "unimplemented_filter".to_string()]);
     assert!(c.is_err());
   }
@@ -147,23 +147,23 @@ mod tests {
   #[test]
   #[ignore]
   fn test_show() {
-    // let c = Command::from_vec(&vec!["show".to_string(), "foo".to_string()]);
+    // let c = Command::from_slice(&vec!["show".to_string(), "foo".to_string()]);
     // assert_eq!(c, Some(Command::Show("foo".to_string())));
 
-    // let c = Command::from_vec(&vec!["show".to_string()]);
+    // let c = Command::from_slice(&vec!["show".to_string()]);
     // assert_eq!(c, None);
 
-    // let c = Command::from_vec(&vec!["show".to_string(), "asdfsafd".to_string()]);
+    // let c = Command::from_slice(&vec!["show".to_string(), "asdfsafd".to_string()]);
     // assert_eq!(c, Some(Command::Show("asdfsafd".to_string())));
   }
 
 
   #[test]
   fn test_add() {
-    let c = Command::from_vec(&vec!["add".to_string(), "foo".to_string()]);
+    let c = Command::from_slice(&vec!["add".to_string(), "foo".to_string()]);
     assert_eq!(c, Ok(Command::Add("foo".to_string(), Tags::new())));
 
-    let c = Command::from_vec(&vec!["add".to_string(), "foo".to_string(), "bar".to_string()]);
+    let c = Command::from_slice(&vec!["add".to_string(), "foo".to_string(), "bar".to_string()]);
     assert_eq!(c, Ok(Command::Add("foo bar".to_string(), Tags::new())));
   }
 
@@ -173,7 +173,7 @@ mod tests {
                       "tag:foo".to_string(),
                       "my title containing tag:42".to_string(),
                       "t:42 foo".to_string()];
-    if let Command::Add(title, tags) = Command::from_vec(&params).unwrap() {
+    if let Command::Add(title, tags) = Command::from_slice(&params).unwrap() {
       assert_eq!(title, "my title containing tag:42");
       assert!(tags.contains("42 foo"));
       assert!(tags.contains("foo"));
@@ -184,7 +184,7 @@ mod tests {
 
   #[test]
   fn test_default() {
-    let c = Command::from_vec(&vec![]);
+    let c = Command::from_slice(&vec![]);
     assert_eq!(c, Ok(Command::List(Tags::new())));
   }
 }
