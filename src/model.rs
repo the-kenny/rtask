@@ -110,7 +110,6 @@ impl Model {
     self.numerical_ids = self.all_tasks().into_iter()
       .filter(|t| !t.is_done())
       .enumerate()
-      .take(100)
       .map(|(n, t)| (t.uuid.clone(), (n as u64)+1))
       .collect();
   }
