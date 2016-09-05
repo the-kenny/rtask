@@ -42,13 +42,6 @@ impl Command {
     }
   }
 
-  pub fn should_recalculate_ids(&self) -> bool {
-    match *self {
-      Command::List(_) => true,
-      _ => false
-    }
-  }
-
   fn from_slice(args: &[String]) -> Result<Self, ParseError> {
     // Try to parse args[0] as TaskRef first
     if let Some(tr) = args.get(0).and_then(|s| TaskRef::from_str(s).ok()) {
