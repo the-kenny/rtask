@@ -11,8 +11,6 @@ use rtask::terminal_size::*;
 use std::fs;
 use std::io::ErrorKind;
 
-const LIST_PRINT_LIMIT: usize = 10;
-
 pub const PID_FILE: &'static str = "tasks.pid";
 
 #[derive(Debug)]
@@ -48,13 +46,13 @@ fn command_to_effect(model: &mut Model, command: Command) -> Result<Option<Effec
       // Recalculate IDs
       model.recalculate_numerical_ids(&task_ids[..]);
 
-      // TODO: Calculate padding
-      let right_padding = 10 + 8;
-      let terminal_width = terminal_size().columns - right_padding;
+      let terminal_size = terminal_size();
 
       let filtered_tasks: Vec<_> = task_ids.iter()
         .map(|uuid| model.tasks.get(uuid).unwrap())
         .collect();
+
+      let task_limit = terminal_size.rows - 4; // TODO: Use a better number
 
       let rows: Vec<_> = filtered_tasks.iter()
         .enumerate()
@@ -81,12 +79,12 @@ fn command_to_effect(model: &mut Model, command: Command) -> Result<Option<Effec
             fields: values,
             style: Some(style),
           }
-        }).take(LIST_PRINT_LIMIT).collect();
+        }).take(task_limit).collect();
 
       if !rows.is_empty() {
         use std::io;
         let mut p = TablePrinter::new();
-        p.width_limit = Some(terminal_width);
+        p.width_limit = Some(terminal_size.columns - 12);
         p.titles = vec!["id", "pri", "age", "desc", "urg"];
         p.print(&mut io::stdout(), &rows).unwrap();
 
