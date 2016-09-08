@@ -30,7 +30,7 @@ pub struct Model {
   // TODO: hide `tasks` and add `archived_tasks`
   pub tasks: HashMap<Uuid, Task>,
   pub applied_effects: Vec<Effect>,
-  pub numerical_ids: BTreeMap<Uuid, u64>,
+  pub numerical_ids: BTreeMap<u64, Uuid>,
 
   is_dirty: bool,
 }
@@ -102,6 +102,12 @@ impl Model {
 
 // Numerical-ID Handling
 impl Model {
+  pub fn short_task_id(&self, task_id: &Uuid) -> Option<u64> {
+    self.numerical_ids.iter()
+      .find(|&(_, uuid)| uuid == task_id)
+      .map(|(n, _)| *n)
+  }
+
   pub fn recalculate_numerical_ids(&mut self, task_ids: &[Uuid]) {
     info!("Recalculating numerical-ids");
 
@@ -109,7 +115,7 @@ impl Model {
 
     self.numerical_ids = task_ids.iter()
       .enumerate()
-      .map(|(n, uuid)| (uuid.clone(), (n as u64)+1))
+      .map(|(n, uuid)| ((n as u64)+1, uuid.clone()))
       .collect();
   }
 }
@@ -139,11 +145,8 @@ impl Model {
         }).collect()
       },
       TaskRef::Numerical(ref n) => {
-        let res = self.numerical_ids.iter()
-          .find(|&(_, i)| n == i);
-
-        match res {
-          Some((uuid, _)) => vec![uuid],
+        match self.numerical_ids.get(n) {
+          Some(uuid) => vec![uuid],
           None => vec![],
         }
       },

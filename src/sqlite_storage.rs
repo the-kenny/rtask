@@ -50,14 +50,14 @@ impl SqliteStorage {
     effects
   }
 
-  fn query_numerical_ids(db: &Connection)  -> Result<BTreeMap<Uuid, u64>, Error> {
+  fn query_numerical_ids(db: &Connection)  -> Result<BTreeMap<u64, Uuid>, Error> {
     let mut stmt = try!(db.prepare("select id, uuid from numerical_ids"));
 
     let uuids = try!(stmt.query_map(&[], |row| {
       let n: i64 = row.get(0);
       let uuid: String = row.get(1);
       let uuid: Uuid = json::decode(&uuid).unwrap();
-      (uuid, n as u64)
+      (n as u64, uuid)
     }))
       .map(Result::unwrap)
       .collect();
@@ -142,7 +142,7 @@ impl Drop for SqliteStorage {
     debug!("Storing numerical_ids");
     tx.execute("delete from numerical_ids", &[])
       .expect("Failed to clear numerical_ids");
-    for (uuid, n) in self.model.numerical_ids.iter() {
+    for (n, uuid) in self.model.numerical_ids.iter() {
       let n = *n as i64;
       let uuid = json::encode(&uuid).unwrap();
       tx.execute("insert into numerical_ids (id, uuid) values ($1, $2)", &[&n, &uuid])

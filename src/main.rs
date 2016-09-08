@@ -24,7 +24,8 @@ impl From<FindTaskError> for HandleCommandError {
   }
 }
 
-fn command_to_effect(model: &mut Model, command: Command) -> Result<Option<Effect>, HandleCommandError> {
+fn command_to_effect(model: &mut Model, command: Command)
+                     -> Result<Option<Effect>, HandleCommandError> {
   info!("Command: {:?}", command);
 
   match command {
@@ -57,8 +58,8 @@ fn command_to_effect(model: &mut Model, command: Command) -> Result<Option<Effec
       let rows: Vec<_> = filtered_tasks.iter()
         .enumerate()
         .map(|(n, task)| {
-          let short = model.numerical_ids.get(&task.uuid)
-            .map(u64::to_string)
+          let short = model.short_task_id(&task.uuid)
+            .map(|n| n.to_string())
             .unwrap_or(task.short_id());
 
           let values = vec![short,
