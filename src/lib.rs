@@ -1,11 +1,13 @@
+extern crate ansi_term;
 extern crate bincode;
 extern crate libc;
+extern crate regex;
+extern crate rusqlite;
 extern crate rustc_serialize;
 extern crate time;
 extern crate uuid;
-extern crate rusqlite;
-extern crate ansi_term;
 #[macro_use] extern crate log;
+#[macro_use] extern crate lazy_static;
 
 pub mod commands;
 pub mod file_lock;
