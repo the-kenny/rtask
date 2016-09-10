@@ -8,7 +8,7 @@ use rtask::*;
 use rtask::commands::Command;
 use rtask::terminal_size::*;
 
-use std::fs;
+use std::{env, fs};
 use std::io::ErrorKind;
 
 pub const PID_FILE: &'static str = "tasks.pid";
@@ -24,12 +24,14 @@ impl From<FindTaskError> for HandleCommandError {
   }
 }
 
-fn command_to_effect(model: &mut Model, command: Command)
+fn command_to_effect(model: &mut Model,
+                     scope: &Scope,
+                     command: Command)
                      -> Result<Option<Effect>, HandleCommandError> {
   info!("Command: {:?}", command);
 
   match command {
-    Command::List(ref tags) => {
+    Command::List(tags) => {
       use rtask::printer::*;
 
       info!("Listing filtered by tags {:?}", tags);
@@ -41,6 +43,7 @@ fn command_to_effect(model: &mut Model, command: Command)
       let task_ids: Vec<_> = model.all_tasks().into_iter()
         .filter(|t| !t.is_done())
         .filter(|t| tags.is_empty() || tags.is_subset(&t.tags))
+        // .filter(|t| scope.contains_task(t))
         .map(|t| t.uuid)
         .collect();
 
@@ -136,6 +139,18 @@ fn main() {
   let _lock = FileLock::new(PID_FILE).expect("Failed to acquire lock");
 
   {
+    // TODO: Load from file
+    let mut bevuta = Scope::default();
+    bevuta.included_tags.insert("bevuta".into());
+    let mut config = Config::default();
+    config.scopes.insert("bevuta".into(), bevuta);
+
+    let scope = env::var("RTASK_SCOPE").ok()
+      .and_then(|v| config.scopes.get(&v))
+      .unwrap_or(&config.default_scope);
+
+    info!("Using scope: {:?}", scope);
+    
     let mut store = Storage::new().expect("Failed to open store");
     let command = Command::from_args();
 
@@ -146,7 +161,7 @@ fn main() {
       },
       Ok(command) => {
         let mut model = store.model();
-        let effect = command_to_effect(&mut model, command).unwrap(); // TODO
+        let effect = command_to_effect(&mut model, &scope, command).unwrap(); // TODO
 
         // Print effect descriptions
         if let Some(ref effect) = effect {
@@ -182,7 +197,6 @@ fn main() {
 }
 
 fn chdir() {
-  use std::env;
   let dir = env::var("RTASK_DIRECTORY")
     .map(Into::into)
     .unwrap_or_else(|_| {
