@@ -28,7 +28,7 @@ fn command_to_effect(model: &mut Model,
                      scope: &Scope,
                      command: Command)
                      -> Result<Option<Effect>, HandleCommandError> {
-  info!("Command: {:?}", command);
+  info!("Command (prior scope application): {:?}", command);
 
   match command {
     Command::List(tags) => {
@@ -43,11 +43,12 @@ fn command_to_effect(model: &mut Model,
       let task_ids: Vec<_> = model.all_tasks().into_iter()
         .filter(|t| !t.is_done())
         .filter(|t| tags.is_empty() || tags.is_subset(&t.tags))
-        // .filter(|t| scope.contains_task(t))
+        .filter(|t| scope.contains_task(t))
         .map(|t| t.uuid)
         .collect();
 
       // Recalculate IDs
+      // TODO: Scope Handling
       model.recalculate_numerical_ids(&task_ids[..]);
 
       let terminal_size = terminal_size();
@@ -103,10 +104,15 @@ fn command_to_effect(model: &mut Model,
     },
     Command::Show(r) => {
       let task = try!(model.find_task(&r));
+      if !scope.contains_task(&task) {
+        println!("Note: Task {} isn't in scope", r);
+      }
+
       println!("{:?}", task);
       Ok(None)
     },
-    Command::Add(title, tags) => {
+    Command::Add(title, mut tags) => {
+      tags.extend(scope.default_tags.iter().cloned());
       Ok(Some(Effect::AddTask(Task::new_with_tags(&title, tags))))
     },
     Command::Delete(r) => {
@@ -123,6 +129,7 @@ fn command_to_effect(model: &mut Model,
     },
     Command::ChangeTags{ task_ref, added, removed } => {
       let task = try!(model.find_task(&task_ref));
+      // TODO: Warn when scope-tags are removed
       Ok(Some(Effect::ChangeTaskTags{
         uuid: task.uuid.clone(),
         added: added,
@@ -142,6 +149,7 @@ fn main() {
     // TODO: Load from file
     let mut bevuta = Scope::default();
     bevuta.included_tags.insert("bevuta".into());
+    bevuta.default_tags.insert("bevuta".into());
     let mut config = Config::default();
     config.scopes.insert("bevuta".into(), bevuta);
 
@@ -150,13 +158,13 @@ fn main() {
       .unwrap_or(&config.default_scope);
 
     info!("Using scope: {:?}", scope);
-    
+
     let mut store = Storage::new().expect("Failed to open store");
     let command = Command::from_args();
 
     match command {
-      Err(e) => {
-        println!("Error while parsing command: {}", e.0);
+      Err(effect) => {
+        println!("Error while parsing command: {}", effect.0);
         return;
       },
       Ok(command) => {
@@ -187,8 +195,10 @@ fn main() {
           }
         }
 
-
-        effect.map(|e| model.apply_effect(e));
+        effect.map(|effect| {
+          info!("Effect: {:?}", effect);
+          model.apply_effect(effect)
+        });
       },
     }
   }
@@ -215,7 +225,7 @@ fn chdir() {
   match fs::create_dir(&dir) {
     Err(ref err) if err.kind() == ErrorKind::AlreadyExists => (),
     Ok(_) => (),
-    Err(e) => panic!("Couldn't create {}: {}", &dir.display(), e),
+    Err(effect) => panic!("Couldn't create {}: {}", &dir.display(), effect),
   }
 
   env::set_current_dir(&dir).expect("Couldn't chdir");

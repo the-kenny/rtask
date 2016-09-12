@@ -6,13 +6,12 @@ use ::task::{Task,Tags};
 pub struct Scope {
   pub excluded_tags: Tags,
   pub included_tags: Tags,
-  // TODO: `default_tags`
+  pub default_tags: Tags,
 }
 
 impl Scope {
   pub fn contains_task(&self, t: &Task) -> bool {
     self.excluded_tags.is_disjoint(&t.tags) && self.included_tags.is_subset(&t.tags)
-
   }
 }
 
@@ -21,6 +20,7 @@ impl Default for Scope {
     Scope {
       excluded_tags: Tags::new(),
       included_tags: Tags::new(),
+      default_tags: Tags::new(),
     }
   }
 }
