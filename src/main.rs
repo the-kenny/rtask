@@ -147,11 +147,11 @@ fn main() {
 
   {
     // TODO: Load from file
-    let mut bevuta = Scope::default();
-    bevuta.included_tags.insert("bevuta".into());
-    bevuta.default_tags.insert("bevuta".into());
-    let mut config = Config::default();
-    config.scopes.insert("bevuta".into(), bevuta);
+    // let mut bevuta = Scope::default();
+    // bevuta.included_tags.insert("bevuta".into());
+    // bevuta.default_tags.insert("bevuta".into());
+    let config = Config::from_file("rtask.toml").unwrap();
+    // config.scopes.insert("bevuta".into(), bevuta);
 
     let scope_name = env::var("RTASK_SCOPE").unwrap_or("default".into());
     let scope = config.scopes.get(&scope_name)

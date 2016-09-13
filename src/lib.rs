@@ -4,6 +4,7 @@ extern crate libc;
 extern crate regex;
 extern crate rusqlite;
 extern crate rustc_serialize;
+extern crate toml;
 extern crate time;
 extern crate uuid;
 #[macro_use] extern crate log;
