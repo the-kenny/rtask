@@ -25,14 +25,22 @@ impl From<FindTaskError> for HandleCommandError {
 }
 
 fn command_to_effect(model: &mut Model,
-                     scope: &Scope,
                      command: Command)
                      -> Result<Option<Effect>, HandleCommandError> {
-  info!("Command (prior scope application): {:?}", command);
+
+  info!("Command (prior scope handling): {:?}", command);
+  let scope_tag = env::var("RTASK_SCOPE_TAG").ok();
+  let scope_name = scope_tag.clone().unwrap_or("default".into());
+
+  info!("Scope tag: {:?}", scope_tag);
 
   match command {
-    Command::List(tags) => {
+    Command::List(mut tags) => {
       use rtask::printer::*;
+
+      if let Some(t) = scope_tag {
+        tags.insert(t);
+      }
 
       info!("Listing filtered by tags {:?}", tags);
 
@@ -43,13 +51,11 @@ fn command_to_effect(model: &mut Model,
       let task_ids: Vec<_> = model.all_tasks().into_iter()
         .filter(|t| !t.is_done())
         .filter(|t| tags.is_empty() || tags.is_subset(&t.tags))
-        .filter(|t| scope.contains_task(t))
         .map(|t| t.uuid)
         .collect();
 
       // Recalculate IDs
-      // TODO: Scope Handling
-      model.recalculate_numerical_ids(&scope.name, &task_ids[..]);
+      model.recalculate_numerical_ids(&scope_name, &task_ids[..]);
 
       let terminal_size = terminal_size();
 
@@ -62,7 +68,7 @@ fn command_to_effect(model: &mut Model,
       let rows: Vec<_> = filtered_tasks.iter()
         .enumerate()
         .map(|(n, task)| {
-          let short = model.short_task_id(&scope.name, &task.uuid)
+          let short = model.short_task_id(&scope_name, &task.uuid)
             .map(|n| n.to_string())
             .unwrap_or(task.short_id());
 
@@ -103,8 +109,8 @@ fn command_to_effect(model: &mut Model,
       Ok(None)
     },
     Command::Show(r) => {
-      let task = try!(model.find_task(&scope.name, &r));
-      if !scope.contains_task(&task) {
+      let task = try!(model.find_task(&scope_name, &r));
+      if scope_tag.is_some() && !task.tags.contains(&scope_tag.unwrap()) {
         println!("Note: Task {} isn't in scope", r);
       }
 
@@ -112,23 +118,23 @@ fn command_to_effect(model: &mut Model,
       Ok(None)
     },
     Command::Add(title, mut tags) => {
-      tags.extend(scope.default_tags.iter().cloned());
+      scope_tag.map(|t| tags.insert(t));
       Ok(Some(Effect::AddTask(Task::new_with_tags(&title, tags))))
     },
     Command::Delete(r) => {
-      let task = try!(model.find_task(&scope.name, &r));
+      let task = try!(model.find_task(&scope_name, &r));
       Ok(Some(Effect::DeleteTask(task.uuid.clone())))
     },
     Command::MarkDone(r) => {
-      let task = try!(model.find_task(&scope.name, &r));
+      let task = try!(model.find_task(&scope_name, &r));
       Ok(Some(Effect::ChangeTaskState(task.uuid.clone(), TaskState::Done(time::get_time()))))
     },
     Command::ChangePriority(r, p) => {
-      let task = try!(model.find_task(&scope.name, &r));
+      let task = try!(model.find_task(&scope_name, &r));
       Ok(Some(Effect::ChangeTaskPriority(task.uuid.clone(), p)))
     },
     Command::ChangeTags{ task_ref, added, removed } => {
-      let task = try!(model.find_task(&scope.name, &task_ref));
+      let task = try!(model.find_task(&scope_name, &task_ref));
       // TODO: Warn when scope-tags are removed
       Ok(Some(Effect::ChangeTaskTags{
         uuid: task.uuid.clone(),
@@ -146,19 +152,6 @@ fn main() {
   let _lock = FileLock::new(PID_FILE).expect("Failed to acquire lock");
 
   {
-    // TODO: Load from file
-    // let mut bevuta = Scope::default();
-    // bevuta.included_tags.insert("bevuta".into());
-    // bevuta.default_tags.insert("bevuta".into());
-    let config = Config::from_file("rtask.toml").unwrap();
-    // config.scopes.insert("bevuta".into(), bevuta);
-
-    let scope_name = env::var("RTASK_SCOPE").unwrap_or("default".into());
-    let scope = config.scopes.get(&scope_name)
-      .unwrap_or(&config.default_scope);
-
-    info!("Using scope: {:?}", scope);
-
     let mut store = Storage::new().expect("Failed to open store");
     let command = Command::from_args();
 
@@ -169,7 +162,7 @@ fn main() {
       },
       Ok(command) => {
         let mut model = store.model();
-        let effect = command_to_effect(&mut model, &scope, command).unwrap(); // TODO
+        let effect = command_to_effect(&mut model, command).unwrap(); // TODO
 
         // Print effect descriptions
         if let Some(ref effect) = effect {

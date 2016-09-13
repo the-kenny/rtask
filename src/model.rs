@@ -111,7 +111,7 @@ impl Model {
       .map(|(n, _)| *n)
   }
 
-  pub fn recalculate_numerical_ids(&mut self, scope_name: &str, task_ids: &[Uuid]) {
+  pub fn recalculate_numerical_ids(&mut self, scope: &str, task_ids: &[Uuid]) {
     info!("Recalculating numerical-ids");
 
     self.is_dirty = true;
@@ -120,7 +120,7 @@ impl Model {
       .enumerate()
       .map(|(n, uuid)| ((n as u64)+1, uuid.clone()))
       .collect();
-    self.numerical_ids.insert(scope_name.into(), ids);
+    self.numerical_ids.insert(scope.into(), ids);
   }
 }
 

@@ -11,7 +11,6 @@ extern crate uuid;
 #[macro_use] extern crate lazy_static;
 
 pub mod commands;
-pub mod config;
 pub mod file_lock;
 pub mod model;
 pub mod printer;
@@ -23,7 +22,6 @@ pub use task::*;
 pub use model::*;
 pub use task_ref::*;
 pub use file_lock::FileLock;
-pub use config::*;
 
 pub mod storage_engine;
 pub use storage_engine::*;
