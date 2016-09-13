@@ -1,8 +1,6 @@
-use ::task::Uuid;
-
+use ::task::*;
 use regex::Regex;
 
-// TODO: Use references instead of ownership
 #[derive(Debug, PartialEq, Eq)]
 pub enum TaskRef {
   ShortUUID(String),
@@ -47,46 +45,6 @@ impl fmt::Display for TaskRef {
       TaskRef::ShortUUID(ref s) => f.write_str(s),
       TaskRef::FullUUID(ref u)  => f.write_str(&u.hyphenated().to_string()),
       TaskRef::Numerical(n)     => f.write_str(&n.to_string()),
-    }
-  }
-}
-
-#[cfg(test)]
-mod tests {
-  use super::*;
-  use std::str::FromStr;
-  use ::task::Uuid;
-
-  #[test]
-  fn test_numerical_ref() {
-    assert_eq!(TaskRef::from_str("42"), Ok(TaskRef::Numerical(42)));
-    assert_eq!(TaskRef::from_str("0"),  Ok(TaskRef::Numerical(0)));
-    assert!(TaskRef::from_str("-0").is_err());
-  }
-
-  #[test]
-  fn test_short_uuid_ref() {
-    for s in vec!["abcdef", "123abc", "000000"] {
-      assert_eq!(TaskRef::from_str(s), Ok(TaskRef::ShortUUID(s.into())));
-    }
-
-    assert!(TaskRef::from_str("abcde").is_err(),   "Short-UUID with len of 5");
-    assert!(TaskRef::from_str("abcdef1").is_err(), "Short-UUID with len of 7");
-
-    // Make sure that short-UUIDs are preferred
-    assert_eq!(TaskRef::from_str("123456"),
-               Ok(TaskRef::ShortUUID("123456".into())));
-
-    // non-base16 symbols
-    assert!(TaskRef::from_str("rivers").is_err());
-  }
-
-  #[test]
-  fn test_full_uuid_ref() {
-    for _ in 1..100 {
-      let uuid = Uuid::new_v4();
-      assert_eq!(TaskRef::from_str(&uuid.hyphenated().to_string()),
-                 Ok(TaskRef::FullUUID(uuid)));
     }
   }
 }

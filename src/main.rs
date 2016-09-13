@@ -49,7 +49,7 @@ fn command_to_effect(model: &mut Model,
 
       // Recalculate IDs
       // TODO: Scope Handling
-      model.recalculate_numerical_ids(&task_ids[..]);
+      model.recalculate_numerical_ids(&scope.name, &task_ids[..]);
 
       let terminal_size = terminal_size();
 
@@ -62,7 +62,7 @@ fn command_to_effect(model: &mut Model,
       let rows: Vec<_> = filtered_tasks.iter()
         .enumerate()
         .map(|(n, task)| {
-          let short = model.short_task_id(&task.uuid)
+          let short = model.short_task_id(&scope.name, &task.uuid)
             .map(|n| n.to_string())
             .unwrap_or(task.short_id());
 
@@ -103,7 +103,7 @@ fn command_to_effect(model: &mut Model,
       Ok(None)
     },
     Command::Show(r) => {
-      let task = try!(model.find_task(&r));
+      let task = try!(model.find_task(&scope.name, &r));
       if !scope.contains_task(&task) {
         println!("Note: Task {} isn't in scope", r);
       }
@@ -116,19 +116,19 @@ fn command_to_effect(model: &mut Model,
       Ok(Some(Effect::AddTask(Task::new_with_tags(&title, tags))))
     },
     Command::Delete(r) => {
-      let task = try!(model.find_task(&r));
+      let task = try!(model.find_task(&scope.name, &r));
       Ok(Some(Effect::DeleteTask(task.uuid.clone())))
     },
     Command::MarkDone(r) => {
-      let task = try!(model.find_task(&r));
+      let task = try!(model.find_task(&scope.name, &r));
       Ok(Some(Effect::ChangeTaskState(task.uuid.clone(), TaskState::Done(time::get_time()))))
     },
     Command::ChangePriority(r, p) => {
-      let task = try!(model.find_task(&r));
+      let task = try!(model.find_task(&scope.name, &r));
       Ok(Some(Effect::ChangeTaskPriority(task.uuid.clone(), p)))
     },
     Command::ChangeTags{ task_ref, added, removed } => {
-      let task = try!(model.find_task(&task_ref));
+      let task = try!(model.find_task(&scope.name, &task_ref));
       // TODO: Warn when scope-tags are removed
       Ok(Some(Effect::ChangeTaskTags{
         uuid: task.uuid.clone(),
@@ -153,8 +153,8 @@ fn main() {
     let mut config = Config::default();
     config.scopes.insert("bevuta".into(), bevuta);
 
-    let scope = env::var("RTASK_SCOPE").ok()
-      .and_then(|v| config.scopes.get(&v))
+    let scope_name = env::var("RTASK_SCOPE").unwrap_or("default".into());
+    let scope = config.scopes.get(&scope_name)
       .unwrap_or(&config.default_scope);
 
     info!("Using scope: {:?}", scope);

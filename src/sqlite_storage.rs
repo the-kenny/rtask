@@ -9,7 +9,6 @@ use ::StorageEngine;
 
 pub struct SqliteStorage {
   model: Model,
-
   db: Connection,
 }
 
@@ -50,14 +49,15 @@ impl SqliteStorage {
     effects
   }
 
-  fn query_numerical_ids(db: &Connection)  -> Result<BTreeMap<u64, Uuid>, Error> {
-    let mut stmt = try!(db.prepare("select id, uuid from numerical_ids"));
+  fn query_numerical_ids(db: &Connection)  -> Result<Vec<(String, u64, Uuid)>, Error> {
+    let mut stmt = try!(db.prepare("select scope, id, uuid from numerical_ids"));
 
     let uuids = try!(stmt.query_map(&[], |row| {
-      let n: i64 = row.get(0);
-      let uuid: String = row.get(1);
+      let scope: String = row.get(0);
+      let n: i64 = row.get(1);
+      let uuid: String = row.get(2);
       let uuid: Uuid = json::decode(&uuid).unwrap();
-      (n as u64, uuid)
+      (scope, n as u64, uuid)
     }))
       .map(Result::unwrap)
       .collect();
@@ -78,11 +78,20 @@ impl SqliteStorage {
 
     let effects = Self::query_effects(&db)
       .expect("Failed to fetch effects from DB");
+
     let mut model = Model::from_effects(effects);
-    model.numerical_ids = Self::query_numerical_ids(&db)
-      .expect("Failed to fetch numerical IDs");
 
     info!("Loaded {} tasks from disk", model.tasks.len());
+
+    // Numerical ID Resolving
+    let numerical_ids = Self::query_numerical_ids(&db)
+      .expect("Failed to fetch numerical IDs");
+
+    for (scope, id, uuid) in numerical_ids {
+      let mut inner = model.numerical_ids.entry(scope).or_insert(BTreeMap::new());
+      inner.insert(id, uuid);
+    }
+
 
     SqliteStorage {
       model: model,
@@ -142,11 +151,14 @@ impl Drop for SqliteStorage {
     debug!("Storing numerical_ids");
     tx.execute("delete from numerical_ids", &[])
       .expect("Failed to clear numerical_ids");
-    for (n, uuid) in self.model.numerical_ids.iter() {
-      let n = *n as i64;
-      let uuid = json::encode(&uuid).unwrap();
-      tx.execute("insert into numerical_ids (id, uuid) values ($1, $2)", &[&n, &uuid])
-        .expect("Failed to insert numerical id");
+
+    for (scope, ids) in self.model.numerical_ids.iter() {
+      for (n, uuid) in ids {
+        let n = *n as i64;
+        let uuid = json::encode(&uuid).unwrap();
+        tx.execute("insert into numerical_ids (scope, id, uuid) values ($1, $2, $3)", &[scope, &n, &uuid])
+          .expect("Failed to insert numerical id");
+      }
     }
 
     tx.commit().expect("Failed to commit transaction");

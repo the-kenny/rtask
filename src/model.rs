@@ -1,5 +1,5 @@
 use ::task::*;
-use ::TaskRef;
+use ::task_ref::TaskRef;
 use std::collections::{BTreeMap, HashMap};
 
 #[derive(Clone, Debug, PartialEq, Eq,
@@ -26,11 +26,14 @@ impl Effect {
   }
 }
 
+pub type ScopeName = String;
+pub type NumericalIds = HashMap<ScopeName, BTreeMap<u64, Uuid>>;
+
 pub struct Model {
   // TODO: hide `tasks` and add `archived_tasks`
   pub tasks: HashMap<Uuid, Task>,
   pub applied_effects: Vec<Effect>,
-  pub numerical_ids: BTreeMap<u64, Uuid>,
+  pub numerical_ids: NumericalIds,
 
   is_dirty: bool,
 }
@@ -40,7 +43,7 @@ impl Model {
     Model {
       tasks: HashMap::new(),
       applied_effects: Vec::new(),
-      numerical_ids: BTreeMap::new(),
+      numerical_ids: NumericalIds::new(),
 
       is_dirty: false,
     }
@@ -102,21 +105,22 @@ impl Model {
 
 // Numerical-ID Handling
 impl Model {
-  pub fn short_task_id(&self, task_id: &Uuid) -> Option<u64> {
-    self.numerical_ids.iter()
-      .find(|&(_, uuid)| uuid == task_id)
+  pub fn short_task_id(&self, scope_name: &str, task_id: &Uuid) -> Option<u64> {
+    self.numerical_ids.get(scope_name)
+      .and_then(|ids| ids.iter().find(|&(_, uuid)| uuid == task_id))
       .map(|(n, _)| *n)
   }
 
-  pub fn recalculate_numerical_ids(&mut self, task_ids: &[Uuid]) {
+  pub fn recalculate_numerical_ids(&mut self, scope_name: &str, task_ids: &[Uuid]) {
     info!("Recalculating numerical-ids");
 
     self.is_dirty = true;
-
-    self.numerical_ids = task_ids.iter()
+    
+    let ids = task_ids.iter()
       .enumerate()
       .map(|(n, uuid)| ((n as u64)+1, uuid.clone()))
       .collect();
+    self.numerical_ids.insert(scope_name.into(), ids);
   }
 }
 
@@ -133,8 +137,14 @@ impl Model {
     v.sort_by(|a,b| b.cmp(a));
     v
   }
+  
+  pub fn get_task<'a>(&'a self, uuid: &Uuid) -> Option<&'a Task> {
+    self.tasks.get(uuid)
+  }
 
-  pub fn find_task<'a>(&'a self, task_ref: &TaskRef) -> Result<&'a Task, FindTaskError> {
+  pub fn find_task<'a>(&'a self,
+                       scope_name: &str,
+                       task_ref: &TaskRef) -> Result<&'a Task, FindTaskError> {
     let uuids: Vec<&Uuid> = match *task_ref {
       TaskRef::FullUUID(ref u) => {
         vec![u]
@@ -145,7 +155,7 @@ impl Model {
         }).collect()
       },
       TaskRef::Numerical(ref n) => {
-        match self.numerical_ids.get(n) {
+        match self.numerical_ids.get(scope_name).and_then(|x| x.get(n)) {
           Some(uuid) => vec![uuid],
           None => vec![],
         }
@@ -155,7 +165,7 @@ impl Model {
     use self::FindTaskError::*;
     match uuids.len() {
       0 => Err(TaskNotFound),
-      1 => self.tasks.get(uuids[0]).map_or(Err(FindTaskError::TaskNotFound), Ok),
+      1 => self.get_task(uuids[0]).map_or(Err(FindTaskError::TaskNotFound), Ok),
       _ => Err(MultipleResults),
     }
   }
@@ -170,19 +180,20 @@ mod tests {
   use super::*;
   use ::{Task, TaskRef, TaskState, Priority};
   use time;
+  use uuid::Uuid;
+  use std::str::FromStr;
 
   #[test]
   fn test_add_delete_task() {
     let mut m = Model::new();
     let t = Task::new("foo");
-    let tref: TaskRef = t.uuid.clone().into();
     m.add_task(t.clone());
-    assert_eq!(m.find_task(&tref), Ok(&t));
-    assert_eq!(m.delete_task(&t.uuid), Some(t));
-    assert_eq!(m.find_task(&tref), Err(FindTaskError::TaskNotFound));
+    assert_eq!(m.get_task(&t.uuid), Some(&t));
+    assert_eq!(m.delete_task(&t.uuid), Some(t.clone()));
+    assert_eq!(m.get_task(&t.uuid), None);
   }
 
-    #[test]
+  #[test]
   fn test_change_task_task() {
     let mut m = Model::new();
     let t = Task::new("foo");
@@ -203,5 +214,38 @@ mod tests {
     assert_eq!(m.tasks[&uuid].priority, Priority::Default);
     m.change_task_priority(&uuid, Priority::High);
     assert_eq!(m.tasks[&uuid].priority, Priority::High);
+  }
+
+  #[test]
+  fn test_numerical_ref() {
+    assert_eq!(TaskRef::from_str("42"), Ok(TaskRef::Numerical(42)));
+    assert_eq!(TaskRef::from_str("0"),  Ok(TaskRef::Numerical(0)));
+    assert!(TaskRef::from_str("-0").is_err());
+  }
+
+  #[test]
+  fn test_short_uuid_ref() {
+    for s in vec!["abcdef", "123abc", "000000"] {
+      assert_eq!(TaskRef::from_str(s), Ok(TaskRef::ShortUUID(s.into())));
+    }
+
+    assert!(TaskRef::from_str("abcde").is_err(),   "Short-UUID with len of 5");
+    assert!(TaskRef::from_str("abcdef1").is_err(), "Short-UUID with len of 7");
+
+    // Make sure that short-UUIDs are preferred
+    assert_eq!(TaskRef::from_str("123456"),
+               Ok(TaskRef::ShortUUID("123456".into())));
+
+    // non-base16 symbols
+    assert!(TaskRef::from_str("rivers").is_err());
+  }
+
+  #[test]
+  fn test_full_uuid_ref() {
+    for _ in 1..100 {
+      let uuid = Uuid::new_v4();
+      assert_eq!(TaskRef::from_str(&uuid.hyphenated().to_string()),
+                 Ok(TaskRef::FullUUID(uuid)));
+    }
   }
 }

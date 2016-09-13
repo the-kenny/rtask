@@ -4,6 +4,7 @@ use ::task::{Task,Tags};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Scope {
+  pub name: String,
   pub excluded_tags: Tags,
   pub included_tags: Tags,
   pub default_tags: Tags,
@@ -18,6 +19,7 @@ impl Scope {
 impl Default for Scope {
   fn default() -> Self {
     Scope {
+      name: "default".into(),
       excluded_tags: Tags::new(),
       included_tags: Tags::new(),
       default_tags: Tags::new(),

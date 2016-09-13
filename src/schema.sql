@@ -18,6 +18,7 @@ create trigger no_upate_trigger
   end;
 
 create table numerical_ids (
+  scope TEXT NOT NULL,
   id INTEGER NOT NULL,
   uuid TEXT NOT NULL
 );
