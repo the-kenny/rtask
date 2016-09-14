@@ -13,6 +13,24 @@ use std::io::ErrorKind;
 
 pub const PID_FILE: &'static str = "tasks.pid";
 
+#[derive(Debug,PartialEq,Eq)]
+struct Scope(Option<String>);
+
+use std::ops::Deref;
+impl Deref for Scope {
+  type Target = str;
+  fn deref(&self) -> &str {
+    // .as_ref().map(AsRef::as_ref), wtf?!
+    self.0.as_ref().map(AsRef::as_ref).unwrap_or("default")
+  }
+}
+
+impl Scope {
+  pub fn as_tag(&self) -> Option<Tag> {
+    self.0.clone()
+  }
+}
+
 #[derive(Debug)]
 enum HandleCommandError {
   FindTaskError(FindTaskError)
@@ -29,18 +47,15 @@ fn command_to_effect(model: &mut Model,
                      -> Result<Option<Effect>, HandleCommandError> {
 
   info!("Command (prior scope handling): {:?}", command);
-  let scope_tag = env::var("RTASK_SCOPE_TAG").ok();
-  let scope_name = scope_tag.clone().unwrap_or("default".into());
+  let scope = Scope(env::var("RTASK_SCOPE_TAG").ok());
 
-  info!("Scope tag: {:?}", scope_tag);
+  info!("Scope tag: {:?}", scope);
 
   match command {
     Command::List(mut tags) => {
       use rtask::printer::*;
 
-      if let Some(t) = scope_tag {
-        tags.insert(t);
-      }
+      scope.as_tag().map(|t| tags.insert(t));
 
       info!("Listing filtered by tags {:?}", tags);
 
@@ -55,7 +70,7 @@ fn command_to_effect(model: &mut Model,
         .collect();
 
       // Recalculate IDs
-      model.recalculate_numerical_ids(&scope_name, &task_ids[..]);
+      model.recalculate_numerical_ids(&scope, &task_ids[..]);
 
       let terminal_size = terminal_size();
 
@@ -68,7 +83,7 @@ fn command_to_effect(model: &mut Model,
       let rows: Vec<_> = filtered_tasks.iter()
         .enumerate()
         .map(|(n, task)| {
-          let short = model.short_task_id(&scope_name, &task.uuid)
+          let short = model.short_task_id(&scope, &task.uuid)
             .map(|n| n.to_string())
             .unwrap_or(task.short_id());
 
@@ -109,32 +124,35 @@ fn command_to_effect(model: &mut Model,
       Ok(None)
     },
     Command::Show(r) => {
-      let task = try!(model.find_task(&scope_name, &r));
-      if scope_tag.is_some() && !task.tags.contains(&scope_tag.unwrap()) {
-        println!("Note: Task {} isn't in scope", r);
+      let task = try!(model.find_task(&scope, &r));
+      match scope.as_tag() {
+        Some(ref t) if !task.tags.contains(t) => {
+          println!("Note: Task {} isn't in scope", r);
+        }
+        _ => ()
       }
 
       println!("{:?}", task);
       Ok(None)
     },
     Command::Add(title, mut tags) => {
-      scope_tag.map(|t| tags.insert(t));
+      scope.as_tag().map(|t| tags.insert(t));
       Ok(Some(Effect::AddTask(Task::new_with_tags(&title, tags))))
     },
     Command::Delete(r) => {
-      let task = try!(model.find_task(&scope_name, &r));
+      let task = try!(model.find_task(&scope, &r));
       Ok(Some(Effect::DeleteTask(task.uuid.clone())))
     },
     Command::MarkDone(r) => {
-      let task = try!(model.find_task(&scope_name, &r));
+      let task = try!(model.find_task(&scope, &r));
       Ok(Some(Effect::ChangeTaskState(task.uuid.clone(), TaskState::Done(time::get_time()))))
     },
     Command::ChangePriority(r, p) => {
-      let task = try!(model.find_task(&scope_name, &r));
+      let task = try!(model.find_task(&scope, &r));
       Ok(Some(Effect::ChangeTaskPriority(task.uuid.clone(), p)))
     },
     Command::ChangeTags{ task_ref, added, removed } => {
-      let task = try!(model.find_task(&scope_name, &task_ref));
+      let task = try!(model.find_task(&scope, &task_ref));
       // TODO: Warn when scope-tags are removed
       Ok(Some(Effect::ChangeTaskTags{
         uuid: task.uuid.clone(),
