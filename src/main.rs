@@ -8,7 +8,7 @@ use rtask::*;
 use rtask::commands::Command;
 use rtask::terminal_size::*;
 
-use std::{env, fs};
+use std::{env, fs, fmt};
 use std::io::ErrorKind;
 
 pub const PID_FILE: &'static str = "tasks.pid";
@@ -22,6 +22,12 @@ impl Deref for Scope {
   fn deref(&self) -> &str {
     // .as_ref().map(AsRef::as_ref), wtf?!
     self.0.as_ref().map(AsRef::as_ref).unwrap_or("default")
+  }
+}
+
+impl fmt::Display for Scope {
+  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    f.write_str(self.as_ref())
   }
 }
 
@@ -49,7 +55,7 @@ fn command_to_effect(model: &mut Model,
   info!("Command (prior scope handling): {:?}", command);
   let scope = Scope(env::var("RTASK_SCOPE_TAG").ok());
 
-  info!("Scope tag: {:?}", scope);
+  info!("Using scope {}", scope);
 
   match command {
     Command::List(mut tags) => {
@@ -127,7 +133,7 @@ fn command_to_effect(model: &mut Model,
       let task = try!(model.find_task(&scope, &r));
       match scope.as_tag() {
         Some(ref t) if !task.tags.contains(t) => {
-          println!("Note: Task {} isn't in scope", r);
+          println!("Note: Task {} isn't in scope {}", r, scope);
         }
         _ => ()
       }

@@ -112,7 +112,7 @@ impl Model {
   }
 
   pub fn recalculate_numerical_ids(&mut self, scope: &str, task_ids: &[Uuid]) {
-    info!("Recalculating numerical-ids");
+    info!("Recalculating numerical-ids for scope {}", scope);
 
     self.is_dirty = true;
     
