@@ -53,7 +53,7 @@ fn command_to_effect(model: &mut Model,
                      -> Result<Option<Effect>, HandleCommandError> {
 
   info!("Command (prior scope handling): {:?}", command);
-  let scope = Scope(env::var("RTASK_SCOPE_TAG").ok());
+  let scope = Scope(env::var("RTASK_SCOPE").ok());
 
   info!("Using scope {}", scope);
 
