@@ -180,19 +180,24 @@ fn main() {
     let command = Command::from_args();
 
     match command {
-      Err(effect) => {
-        println!("Error while parsing command: {}", effect.0);
+      Err(error) => {
+        println!("Error while parsing command: {}", error.0);
         return;
       },
       Ok(command) => {
         let mut model = store.model();
         let effect = command_to_effect(&mut model, command).unwrap(); // TODO
 
+        effect.as_ref().map(|effect| {
+          info!("Effect: {:?}", effect);
+          model.apply_effect(effect.clone())
+        });
+
         // Print effect descriptions
         if let Some(ref effect) = effect {
           use rtask::Effect::*;
           match *effect {
-            AddTask(ref t)       => println!("Added Task '{}'", t.description),
+            AddTask(ref t)       => println!("Added Task {}", t.short_id()),
             DeleteTask(ref uuid) => println!("Deleted task '{}'", model.tasks[uuid].description),
             ChangeTaskTags{ ref added, ref removed, ..} => {
               if !added.is_empty()   { println!("Added tags {:?}",   added); }
@@ -207,15 +212,10 @@ fn main() {
             },
             ChangeTaskPriority(ref uuid, ref priority) => {
               let ref t = model.tasks[uuid];
-              println!("Changing  priority of task '{}' to {}", t.description, priority);
+              println!("Changed  priority of task '{}' to {}", t.description, priority);
             }
           }
         }
-
-        effect.map(|effect| {
-          info!("Effect: {:?}", effect);
-          model.apply_effect(effect)
-        });
       },
     }
   }
