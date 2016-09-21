@@ -100,12 +100,12 @@ impl Model {
     for t in removed { tags.remove(&t); };
     for t in added   { tags.insert(t);  };
   }
-
 }
 
 // Numerical-ID Handling
 impl Model {
   pub fn short_task_id(&self, scope_name: &str, task_id: &Uuid) -> Option<u64> {
+    // TODO: Handle non-existing scope
     self.numerical_ids.get(scope_name)
       .and_then(|ids| ids.iter().find(|&(_, uuid)| uuid == task_id))
       .map(|(n, _)| *n)
@@ -115,12 +115,31 @@ impl Model {
     info!("Recalculating numerical-ids for scope {}", scope);
 
     self.is_dirty = true;
-    
+
     let ids = task_ids.iter()
       .enumerate()
       .map(|(n, uuid)| ((n as u64)+1, uuid.clone()))
       .collect();
     self.numerical_ids.insert(scope.into(), ids);
+  }
+
+  pub fn incremental_numerical_id(&mut self, scope: &str, task: &Uuid) -> u64 {
+    debug!("Calculating incremental numerical-id for {} in scope {}", task, scope);
+    assert!(self.get_task(task).is_some());
+
+    self.short_task_id(scope, task).unwrap_or_else(|| {
+      self.is_dirty = true;
+      let mut numerical_ids = self.numerical_ids.entry(scope.into())
+        .or_insert(BTreeMap::new());
+
+      let n = numerical_ids.iter()
+        .map(|(id,_)| *id)
+        .max()
+        .unwrap_or(0) + 1;
+
+      numerical_ids.insert(n, task.clone());
+      n
+    })
   }
 }
 
@@ -137,7 +156,7 @@ impl Model {
     v.sort_by(|a,b| b.cmp(a));
     v
   }
-  
+
   pub fn get_task<'a>(&'a self, uuid: &Uuid) -> Option<&'a Task> {
     self.tasks.get(uuid)
   }
@@ -247,5 +266,43 @@ mod tests {
       assert_eq!(TaskRef::from_str(&uuid.hyphenated().to_string()),
                  Ok(TaskRef::FullUUID(uuid)));
     }
+  }
+
+  #[test]
+  fn test_incremental_numerical_id_empty_scope() {
+    let mut m = Model::new();
+    let t = Task::new("foo");
+    let uuid = t.uuid.clone();
+    m.add_task(t.clone());
+    assert_eq!(m.incremental_numerical_id("defaut", &uuid), 1);
+  }
+
+  #[test]
+  #[should_panic]
+  fn test_incremental_numerical_id_unknown_task() {
+    let mut m = Model::new();
+    m.incremental_numerical_id("default", &Uuid::new_v4());
+  }
+
+  #[test]
+  fn test_incremental_numerical_id_already_exists() {
+    let mut m = Model::new();
+    let t = Task::new("foo");
+    m.add_task(t.clone());
+    m.recalculate_numerical_ids("default", &vec![t.uuid]);
+    assert_eq!(m.incremental_numerical_id("default", &t.uuid), 1);
+  }
+
+  #[test]
+  fn test_incremental_numerical_id() {
+    let mut m = Model::new();
+    let t = Task::new("foo");
+    let t2 = Task::new("bar");
+    m.add_task(t.clone());
+    m.recalculate_numerical_ids("default", &vec![t.uuid]);
+    m.add_task(t2.clone());
+    assert_eq!(m.short_task_id("default", &t.uuid), Some(1));
+    assert_eq!(m.incremental_numerical_id("default", &t2.uuid), 2);
+    assert_eq!(m.short_task_id("default", &t2.uuid), Some(2));
   }
 }
