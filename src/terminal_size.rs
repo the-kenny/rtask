@@ -33,7 +33,19 @@ struct Winsize {
 #[cfg(unix)]
 const TIOCGWINSZ: u64 = 0x5413;
 
-fn terminal_size_internal() -> io::Result<TerminalSize> {
+#[derive(Debug)]
+enum TerminalSizeError {
+  Io(io::Error),
+  ZeroSize,
+}
+
+impl From<io::Error> for TerminalSizeError {
+  fn from(err: io::Error) -> Self {
+    TerminalSizeError::Io(err)
+  }
+}
+
+fn terminal_size_internal() -> Result<TerminalSize, TerminalSizeError> {
   let w: Winsize = Winsize {
     ws_row: 0, ws_col: 0, ws_xpixel: 0, ws_ypixel: 0
   };
@@ -41,13 +53,17 @@ fn terminal_size_internal() -> io::Result<TerminalSize> {
   if ret == -1 {
     let last_err = io::Error::last_os_error();
     warn!("Got OS Error: {:?}", last_err);
-    Err(last_err)
+    Err(last_err.into())
   } else {
-    info!("Got terminal size: {}x{}", w.ws_col, w.ws_row);
-    Ok(TerminalSize {
-      columns: w.ws_col as usize,
-      rows: w.ws_row as usize,
-    })
+    if w.ws_col > 0 && w.ws_row > 0 {
+      info!("Got terminal size: {}x{}", w.ws_col, w.ws_row);
+      Ok(TerminalSize {
+        columns: w.ws_col as usize,
+        rows: w.ws_row as usize,
+      })
+    } else {
+      Err(TerminalSizeError::ZeroSize)
+    }
   }
 }
 
