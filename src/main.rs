@@ -186,33 +186,43 @@ fn main() {
       },
       Ok(command) => {
         let mut model = store.model();
-        let effect = command_to_effect(&mut model, command).unwrap(); // TODO
+        match  command_to_effect(&mut model, command) {
+          // TODO: Store TaskRef in these errors (and simply the naming)
+          Err(HandleCommandError::FindTaskError(FindTaskError::MultipleResults)) => {
+            println!("Multiple matching tasks found");
+          },
+          Err(HandleCommandError::FindTaskError(FindTaskError::TaskNotFound)) => {
+            println!("No matching task found");
+          },
+          Ok(effect) => {
 
-        effect.as_ref().map(|effect| {
-          info!("Effect: {:?}", effect);
-          model.apply_effect(effect.clone())
-        });
+            effect.as_ref().map(|effect| {
+              info!("Effect: {:?}", effect);
+              model.apply_effect(effect.clone())
+            });
 
-        // Print effect descriptions
-        if let Some(ref effect) = effect {
-          use rtask::Effect::*;
-          match *effect {
-            AddTask(ref t)       => println!("Added Task {}", t.short_id()),
-            DeleteTask(ref uuid) => println!("Deleted task '{}'", model.tasks[uuid].description),
-            ChangeTaskTags{ ref added, ref removed, ..} => {
-              if !added.is_empty()   { println!("Added tags {:?}",   added); }
-              if !removed.is_empty() { println!("Removed tags {:?}", removed); }
-            }
-            ChangeTaskState(ref uuid, ref state) => {
-              let ref t = model.tasks[uuid];
-              match *state {
-                TaskState::Done(_) => println!("Marking task '{}' as done", t.description),
-                TaskState::Open    => println!("Marking task '{}' as open", t.description),
+            // Print effect descriptions
+            if let Some(ref effect) = effect {
+              use rtask::Effect::*;
+              match *effect {
+                AddTask(ref t)       => println!("Added Task {}", t.short_id()),
+                DeleteTask(ref uuid) => println!("Deleted task '{}'", model.tasks[uuid].description),
+                ChangeTaskTags{ ref added, ref removed, ..} => {
+                  if !added.is_empty()   { println!("Added tags {:?}",   added); }
+                  if !removed.is_empty() { println!("Removed tags {:?}", removed); }
+                }
+                ChangeTaskState(ref uuid, ref state) => {
+                  let ref t = model.tasks[uuid];
+                  match *state {
+                    TaskState::Done(_) => println!("Marking task '{}' as done", t.description),
+                    TaskState::Open    => println!("Marking task '{}' as open", t.description),
+                  }
+                },
+                ChangeTaskPriority(ref uuid, ref priority) => {
+                  let ref t = model.tasks[uuid];
+                  println!("Changed  priority of task '{}' to {}", t.description, priority);
+                }
               }
-            },
-            ChangeTaskPriority(ref uuid, ref priority) => {
-              let ref t = model.tasks[uuid];
-              println!("Changed  priority of task '{}' to {}", t.description, priority);
             }
           }
         }
