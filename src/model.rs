@@ -14,6 +14,7 @@ pub enum Effect {
 }
 
 impl Effect {
+  // TODO: Unclear semantics, `AddTask` actually has an ID
   pub fn task_id<'a>(&'a self) -> Option<&'a Uuid> {
     use Effect::*;
     match *self {
