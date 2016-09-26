@@ -1,7 +1,8 @@
 use std::path::Path;
 use std::collections::BTreeMap;
 
-use rusqlite::{Connection, Error};
+use rusqlite;
+use rusqlite::Connection;
 use rustc_serialize::json;
 
 use ::{ Model, Effect, Uuid };
@@ -11,6 +12,8 @@ pub struct SqliteStorage {
   model: Model,
   db: Connection,
 }
+
+pub type Error = rusqlite::Error;
 
 impl SqliteStorage {
   fn is_initialized(db: &Connection) -> bool {
@@ -67,25 +70,20 @@ impl SqliteStorage {
     Ok(uuids)
   }
 
-  fn load_from<P: AsRef<Path>>(path: P) -> Self {
-    let mut db = Connection::open(path)
-      .expect("Failed to open db");
+  fn load_from<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
+    let mut db = try!(Connection::open(path));
 
     if !Self::is_initialized(&db) {
-      Self::initialize_db(&mut db)
-        .expect("Failed to initialize DB");
+      try!(Self::initialize_db(&mut db));
     }
 
-    let effects = Self::query_effects(&db)
-      .expect("Failed to fetch effects from DB");
-
+    let effects = try!(Self::query_effects(&db));
     let mut model = Model::from_effects(effects);
 
     info!("Loaded {} tasks from disk", model.tasks.len());
 
     // Numerical ID Resolving
-    let numerical_ids = Self::query_numerical_ids(&db)
-      .expect("Failed to fetch numerical IDs");
+    let numerical_ids = try!(Self::query_numerical_ids(&db));
 
     for (scope, id, uuid) in numerical_ids {
       let mut inner = model.numerical_ids.entry(scope).or_insert(BTreeMap::new());
@@ -93,10 +91,10 @@ impl SqliteStorage {
     }
 
 
-    SqliteStorage {
+    Ok(SqliteStorage {
       model: model,
       db: db,
-    }
+    })
   }
 
   pub fn new_in_memory() -> Self {
@@ -109,11 +107,10 @@ impl SqliteStorage {
 }
 
 impl StorageEngine for SqliteStorage {
-  type LoadErr = ();
+  type LoadErr = Error;
 
   fn new() -> Result<Self, Self::LoadErr> {
-    // TODO: error handling
-    Ok(Self::load_from("store.sqlite"))
+    Self::load_from("store.sqlite")
   }
 
   fn model<'a>(&'a mut self) -> &'a mut Model {
@@ -172,7 +169,7 @@ mod tests {
 
   #[test]
   fn test_serialization() {
-    use std::{env, fs};
+    use std::{env, fs, mem};
     use std::io::ErrorKind;
 
     let mut tempfile = env::temp_dir();
@@ -184,20 +181,17 @@ mod tests {
     }
 
     let task = Task::new("task #1");
-    {
-      let mut store = SqliteStorage::load_from(&tempfile);
-      assert_eq!(0, store.model.tasks.len());
-      store.model.apply_effect(Effect::AddTask(task.clone()));
-      assert_eq!(1, store.model.tasks.len());
-      // store drops, gets serialized
-    }
-    {
-      // Load from file, check if everything is as we've left it
-      // TODO: Check for whole-model equality
-      let store = SqliteStorage::load_from(&tempfile);
-      assert_eq!(1, store.model.tasks.len());
-      assert_eq!(Some(&task), store.model.tasks.get(&task.uuid));
-    }
+    let mut store = SqliteStorage::load_from(&tempfile).unwrap();
+    assert_eq!(0, store.model.tasks.len());
+    store.model.apply_effect(Effect::AddTask(task.clone()));
+    assert_eq!(1, store.model.tasks.len());
+    mem::drop(store);       // store drops, gets serialized
+
+    // Load from file, check if everything is as we've left it
+    // TODO: Check for whole-model equality
+    let store = SqliteStorage::load_from(&tempfile).unwrap();
+    assert_eq!(1, store.model.tasks.len());
+    assert_eq!(Some(&task), store.model.tasks.get(&task.uuid));
 
     fs::remove_file(tempfile).unwrap();
   }
