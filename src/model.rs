@@ -14,11 +14,12 @@ pub enum Effect {
 }
 
 impl Effect {
-  // TODO: Unclear semantics, `AddTask` actually has an ID
+  // TODO: Do *all* tasks have a related `TaskId`? If so, remove the
+  // `Option`
   pub fn task_id<'a>(&'a self) -> Option<&'a Uuid> {
     use Effect::*;
     match *self {
-      AddTask(_)                     => None,
+      AddTask(Task{ ref uuid, .. })  => Some(uuid),
       ChangeTaskTags{ ref uuid, .. } => Some(uuid),
       ChangeTaskState(ref u, _)      => Some(u),
       ChangeTaskPriority(ref u, _)   => Some(u),
