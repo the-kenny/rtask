@@ -196,7 +196,7 @@ fn main() {
           },
           Ok(None) => (),
           Ok(Some(effect)) => {
-            // Ugh, cloning
+            // Ugh, cloning (to make the borrow checker happy)
             let t = effect.task_id().and_then(|id| model.get_task(id)).cloned();
 
             info!("Effect: {:?}", effect);
@@ -211,13 +211,13 @@ fn main() {
                 if !added.is_empty()   { println!("Added tags {:?}",   added); }
                 if !removed.is_empty() { println!("Removed tags {:?}", removed); }
               }
-              ChangeTaskState(ref uuid, ref state) => {
+              ChangeTaskState(_uuid, ref state) => {
                 match *state {
                   TaskState::Done(_) => println!("Marking task '{}' as done", t.unwrap().description),
                   TaskState::Open    => println!("Marking task '{}' as open", t.unwrap().description),
                 }
               },
-              ChangeTaskPriority(ref uuid, ref priority) => {
+              ChangeTaskPriority(_uuid, ref priority) => {
                 println!("Changed  priority of task '{}' to {}", t.unwrap().description, priority);
               }
             }
