@@ -60,28 +60,37 @@ impl Command {
         Some("tag") => {
           let mut added   = Tags::new();
           let mut removed = Tags::new();
-          for mut t in args.iter().skip(2).cloned() {
-            if t.starts_with("+") {
-              t.remove(0); added.insert(t);
-            } else if t.starts_with("-") {
-              t.remove(0); removed.insert(t);
+          for t in args.iter().skip(2).cloned() {
+            if let Some((direction, tag)) = t.as_tag() {
+              match direction {
+                TagDirection::Added   => added.insert(tag),
+                TagDirection::Removed => removed.insert(tag),
+              };
             } else {
               return Err(ParseError(format!("Usage: <task-ref> tag +foo -bar")))
             }
           }
 
-          Ok(Command::ChangeTags{
-            task_ref: tr,
-            added: added,
-            removed: removed,
-          })
+          if added.is_disjoint(&removed) {
+            Ok(Command::ChangeTags{
+              task_ref: tr,
+              added: added,
+              removed: removed,
+            })
+          } else {
+            Err(ParseError(format!("Tags to add must be disjoing from tags to remove")))
+          }
         }
         Some(cmd) => Err(ParseError(format!("Invalid command '{}'", cmd)))
       }
     } else {
       match args.get(0).map(|s| s.as_ref()) {
         None | Some("list") => {
-          let tags: Option<Tags> = args.iter().skip(1).map(|s| s.as_tag()).collect();
+          let tags: Option<Tags> = args.iter()
+            .skip(1)
+            .map(|s| s.as_added_tag())
+            .collect();
+
           match tags {
             Some(tags) => Ok(Command::List(tags)),
             None       => Err(ParseError(format!("Invalid arguments"))),
@@ -94,11 +103,10 @@ impl Command {
           let tags: Tags = Tags::from_iter(
             params.clone()
               .into_iter()
-              .filter(|s| s.is_tag())
-              .flat_map(|s| s.as_tag()));
+              .flat_map(|s| s.as_added_tag()));
 
           let title = params
-            .filter(|p| !p.is_tag())
+            .filter(|p| p.as_tag().is_none())
             .fold(String::new(), |acc, arg| acc + " " + arg)
             .trim()
             .to_string();
@@ -129,7 +137,7 @@ mod tests {
     assert_eq!(c, Ok(Command::List(Tags::new())));
 
     let c = Command::from_slice(&vec!["list".to_string(),
-                                    "tag:foo".to_string()]);
+                                    "+foo".to_string()]);
     assert_eq!(c, Ok(Command::List(Tags::from_iter(vec!["foo".into()]))));
 
     let c = Command::from_slice(&vec!["list".to_string(),
@@ -163,11 +171,11 @@ mod tests {
   #[test]
   fn test_tag_semantics() {
     let params = vec!["add".to_string(),
-                      "tag:foo".to_string(),
-                      "my title containing tag:42".to_string(),
-                      "t:42 foo".to_string()];
+                      "+foo".to_string(),
+                      "my title containing +42".to_string(),
+                      "+42 foo".to_string()];
     if let Command::Add(title, tags) = Command::from_slice(&params).unwrap() {
-      assert_eq!(title, "my title containing tag:42");
+      assert_eq!(title, "my title containing +42");
       assert!(tags.contains("42 foo"));
       assert!(tags.contains("foo"));
     } else {

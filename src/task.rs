@@ -167,22 +167,48 @@ impl cmp::Ord for Task {
   }
 }
 
-const TAG_PREFIXES: &'static [ &'static str ] = &[ "t:", "tag:" ];
+#[derive(Debug,PartialEq,Eq,Clone,Copy)]
+pub enum TagDirection {
+  Added,
+  Removed
+}
+
+const TAG_PREFIXES: &'static [ &'static str ] = &[ "+", "-" ];
 
 use std::borrow::Cow;
 pub trait StringExt {
-  fn is_tag(&self) -> bool;
-  fn as_tag(&self) -> Option<Tag>;
+  fn as_tag(&self) -> Option<(TagDirection, Tag)>;
+  fn tag_name(&self) -> Option<Tag> { self.as_tag().map(|(_,name)| name) }
+  fn tag_direction(&self) -> Option<TagDirection> { self.as_tag().map(|(dir,_)| dir) }
+
+  fn as_added_tag(&self) -> Option<Tag> {
+    self.as_tag().and_then(|t| match t {
+      (TagDirection::Added, name) => Some(name),
+      _ => None
+    })
+  }
+
+  fn as_removed_tag(&self) -> Option<Tag> {
+    self.as_tag().and_then(|t| match t {
+      (TagDirection::Removed, name) => Some(name),
+      _ => None
+    })
+  }
 
   fn ellipsize<'a>(&'a self, max_width: usize) -> Cow<'a, str>;
 }
 
 impl StringExt for str {
-  fn is_tag(&self) -> bool { TAG_PREFIXES.iter().any(|prefix| self.starts_with(prefix)) }
-  fn as_tag(&self) -> Option<Tag> {
-    if let Some(prefix) = TAG_PREFIXES.iter().find(|prefix| self.starts_with(&prefix[..])) {
-      Some((self[prefix.len()..]).to_string())
-    } else { None }
+  fn as_tag(&self) -> Option<(TagDirection, Tag)> {
+    TAG_PREFIXES.iter().find(|prefix| self.starts_with(&prefix[..])).and_then(|prefix| {
+      let dir = match *prefix {
+        "+" => Some(TagDirection::Added),
+        "-" => Some(TagDirection::Removed),
+        _   => None
+      };
+
+      dir.and_then(|dir| Some((dir, (self[prefix.len()..]).into())))
+    })
   }
 
   fn ellipsize<'a>(&'a self, max_width: usize) -> Cow<'a, str> {
@@ -240,7 +266,7 @@ impl fmt::Display for Priority {
       Priority::High    => "H",
     };
     f.write_str(s)
-  }   
+  }
 }
 
 #[cfg(test)]
@@ -288,13 +314,49 @@ mod tests {
   // }
 
   #[test]
-  fn test_is_tag_string() {
-    let x = vec!["t:foo".to_string(),
-                 "tag:foo".to_string()];
+  fn test_as_tag() {
+    assert_eq!("+foo".as_tag(), Some((TagDirection::Added, "foo".into())));
+    assert_eq!("-foo".as_tag(), Some((TagDirection::Removed, "foo".into())));
+    assert_eq!("+-foo".as_tag(), Some((TagDirection::Added, "-foo".into())));
+    assert_eq!("-+foo".as_tag(), Some((TagDirection::Removed, "+foo".into())));
+    assert_eq!("foo".as_tag(),  None);
+  }
 
-    for t in x {
-      assert_eq!(true, t.is_tag());
-      assert_eq!(Some("foo".to_string()), t.as_tag());
+  #[test]
+  fn test_tag_name() {
+    assert_eq!("+foo".tag_name(), Some("foo".into()));
+    assert_eq!("-foo".tag_name(), Some("foo".into()));
+    assert_eq!("foo".tag_name(), None);
+  }
+
+  #[test]
+  fn test_tag_direction() {
+    assert_eq!("+foo".tag_direction(), Some(TagDirection::Added));
+    assert_eq!("-foo".tag_direction(), Some(TagDirection::Removed));
+    assert_eq!("+-foo".tag_direction(), Some(TagDirection::Added));
+    assert_eq!("-+foo".tag_direction(), Some(TagDirection::Removed));
+    assert_eq!("foo".tag_direction(),  None);
+  }
+
+  #[test]
+  fn test_as_added_tag() {
+    for (t, goal) in vec![("+foo", Some("foo".into())),
+                          ("-foo", None),
+                          ("+-foo", Some("-foo".into())),
+                          ("-+foo", None),
+                          ("foo", None)] {
+      assert_eq!(t.as_added_tag(), goal);
+    }
+  }
+
+  #[test]
+  fn test_as_removed_tag() {
+    for (t, goal) in vec![("-foo", Some("foo".into())),
+                          ("+foo", None),
+                          ("-+foo", Some("+foo".into())),
+                          ("+-foo", None),
+                          ("foo", None)] {
+      assert_eq!(t.as_removed_tag(), goal);
     }
   }
 
