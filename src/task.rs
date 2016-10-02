@@ -98,11 +98,13 @@ impl Task {
 
   pub fn urgency(&self) -> f32 {
     let diff = time::get_time() - self.created;
-    let days = diff.num_days();
+    let seconds_per_day = time::Duration::days(1).num_seconds();
+    let days = diff.num_seconds() as f32 / seconds_per_day as f32;
 
     let mut urgency = 0.0;
-    urgency += days as f32 / 100.0; // Add 0.01 for every day since creation
+    urgency += days / 100.0; // Add 0.01 for every day since creation
     urgency += self.priority.into(); // Add priority
+
     urgency
   }
 
