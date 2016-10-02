@@ -1,10 +1,19 @@
 use std::io;
+use std::collections::HashMap;
 pub use ansi_term::{Colour, Style};
 
 use ::task::StringExt;
 
-pub struct TablePrinter<'a> {
-  pub titles: Vec<&'a str>,
+#[derive(Copy,Clone)]
+pub enum Alignment {
+  Left,
+  Center,
+  Right
+}
+
+pub struct TablePrinter {
+  pub titles: Vec<&'static str>,
+  pub alignments: HashMap<&'static str, Alignment>,
   pub width_limit: Option<usize>,
 }
 
@@ -25,10 +34,11 @@ impl From<io::Error> for PrintError {
   }
 }
 
-impl<'a> TablePrinter<'a> {
+impl TablePrinter {
   pub fn new() -> Self {
     TablePrinter {
       titles: vec![],
+      alignments: HashMap::new(),
       width_limit: None,
     }
   }
@@ -64,10 +74,16 @@ impl<'a> TablePrinter<'a> {
     for row in rows.iter() {
       let style = row.style.unwrap_or(Style::default());
 
-      for (n, text) in row.fields.iter().enumerate() {
+      for (n, (text, title)) in row.fields.iter().zip(self.titles.iter()).enumerate() {
         let width = widths[n];
-        // let text = text.as_ref();
-        let line = format!(" {0:>1$} ", text.ellipsize(width), width);
+        let alignment = self.alignments.get(title).map(|a| *a).unwrap_or(Alignment::Center);
+
+        use self::Alignment::*;
+        let line = match alignment {
+          Left   => format!(" {0:<1$} ", text.ellipsize(width), width),
+          Center => format!(" {0:^1$} ", text.ellipsize(width), width),
+          Right  => format!(" {0:>1$} ", text.ellipsize(width), width),
+        };
         try!(write!(writer, "{}", style.paint(line)));
       }
 
