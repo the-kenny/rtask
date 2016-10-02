@@ -225,7 +225,7 @@ fn main() {
                 }
               },
               ChangeTaskPriority(_uuid, ref priority) => {
-                println!("Changed  priority of task '{}' to {}", t.unwrap().description, priority);
+                println!("Changed priority of task '{}' to {}", t.unwrap().description, priority);
               }
             }
           }
