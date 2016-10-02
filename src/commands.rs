@@ -20,6 +20,7 @@ pub enum Command {
   Show(TaskRef),
   Add(Title, Tags),
   MarkDone(TaskRef),
+  MarkCanceled(TaskRef),
   Delete(TaskRef),
   ChangePriority(TaskRef, Priority),
   ChangeTags{ task_ref: TaskRef, added: Tags, removed: Tags},
@@ -36,6 +37,7 @@ impl Command {
     match *self {
       Show(ref r)                => Some(r),
       MarkDone(ref r)            => Some(r),
+      MarkCanceled(ref r)            => Some(r),
       Delete(ref r)              => Some(r),
       ChangePriority(ref r, _)   => Some(r),
       _                          => None
@@ -49,6 +51,7 @@ impl Command {
         None             => Ok(Command::Show(tr)),
         Some("show")     => Ok(Command::Show(tr)),
         Some("done")     => Ok(Command::MarkDone(tr)),
+        Some("cancel")   => Ok(Command::MarkCanceled(tr)),
         Some("delete")   => Ok(Command::Delete(tr)),
         Some("priority") => {
           if let Some(priority) = args.get(2).and_then(|s| Priority::from_str(&s).ok()) {

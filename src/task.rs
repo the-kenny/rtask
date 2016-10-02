@@ -16,7 +16,8 @@ pub struct Age(time::Duration);
          RustcEncodable, RustcDecodable)]
 pub enum TaskState {
   Open,
-  Done(Time)
+  Done(Time),
+  Canceled(Time),
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash,
@@ -115,10 +116,11 @@ impl Task {
     s
   }
 
-  pub fn is_done(&self) -> bool {
+  pub fn is_open(&self) -> bool {
     match self.status {
-      TaskState::Done(_) => true,
-      TaskState::Open    => false,
+      TaskState::Done(_)     => false,
+      TaskState::Open        => true,
+      TaskState::Canceled(_) => false,
     }
   }
 }

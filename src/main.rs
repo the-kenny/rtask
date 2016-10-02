@@ -1,3 +1,4 @@
+
 extern crate rtask;
 #[macro_use] extern crate log;
 extern crate env_logger;
@@ -70,7 +71,7 @@ fn command_to_effect(model: &mut Model,
       }
 
       let task_ids: Vec<_> = model.all_tasks().into_iter()
-        .filter(|t| !t.is_done())
+        .filter(|t| t.is_open())
         .filter(|t| tags.is_empty() || tags.is_subset(&t.tags))
         .map(|t| t.uuid)
         .collect();
@@ -153,6 +154,10 @@ fn command_to_effect(model: &mut Model,
       let task = try!(model.find_task(&scope, &r));
       Ok(Some(Effect::ChangeTaskState(task.uuid.clone(), TaskState::Done(time::get_time()))))
     },
+    Command::MarkCanceled(r) => {
+      let task = try!(model.find_task(&scope, &r));
+      Ok(Some(Effect::ChangeTaskState(task.uuid.clone(), TaskState::Canceled(time::get_time()))))
+    },
     Command::ChangePriority(r, p) => {
       let task = try!(model.find_task(&scope, &r));
       Ok(Some(Effect::ChangeTaskPriority(task.uuid.clone(), p)))
@@ -213,8 +218,9 @@ fn main() {
               }
               ChangeTaskState(_uuid, ref state) => {
                 match *state {
-                  TaskState::Done(_) => println!("Marking task '{}' as done", t.unwrap().description),
-                  TaskState::Open    => println!("Marking task '{}' as open", t.unwrap().description),
+                  TaskState::Done(_)     => println!("Marking task '{}' as done", t.unwrap().description),
+                  TaskState::Open        => println!("Marking task '{}' as open", t.unwrap().description),
+                  TaskState::Canceled(_) => println!("Marking task '{}' as canceled", t.unwrap().description),
                 }
               },
               ChangeTaskPriority(_uuid, ref priority) => {
