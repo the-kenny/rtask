@@ -119,6 +119,7 @@ fn command_to_effect(model: &mut Model,
         let mut p = TablePrinter::new();
         p.width_limit = Some(terminal_size.columns - 12);
         p.titles = vec!["id", "pri", "age", "desc", "urg"];
+        p.alignments.insert("desc", Alignment::Left);
         p.print(&mut io::stdout(), &rows).unwrap();
 
         if filtered_tasks.len() > rows.len() {
