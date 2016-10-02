@@ -14,7 +14,7 @@ pub enum Effect {
 }
 
 impl Effect {
-  // TODO: Do *all* tasks have a related `TaskId`? If so, remove the
+  // TODO: Do *all* effects have a related `TaskId`? If so, remove the
   // `Option`
   pub fn task_id<'a>(&'a self) -> Option<&'a Uuid> {
     use Effect::*;
@@ -107,7 +107,6 @@ impl Model {
 // Numerical-ID Handling
 impl Model {
   pub fn short_task_id(&self, scope_name: &str, task_id: &Uuid) -> Option<u64> {
-    // TODO: Handle non-existing scope
     self.numerical_ids.get(scope_name)
       .and_then(|ids| ids.iter().find(|&(_, uuid)| uuid == task_id))
       .map(|(n, _)| *n)
@@ -151,12 +150,28 @@ pub enum FindTaskError {
   MultipleResults
 }
 
+pub struct TaskIter<'a> {
+  tasks: Vec<&'a Task>,
+  pos: usize,
+}
+
+impl<'a> Iterator for TaskIter<'a> {
+  type Item = &'a Task;
+  fn next(&mut self) -> Option<Self::Item> {
+    let v = self.tasks.get(self.pos);
+    self.pos += 1;
+    v.map(|x| *x)
+  }
+}
+
 impl Model {
-  // TODO: Iterator
-  pub fn all_tasks<'a>(&'a self) -> Vec<&'a Task> {
+  pub fn all_tasks<'a>(&'a self) -> TaskIter<'a> {
     let mut v: Vec<&Task> = self.tasks.values().collect();
     v.sort_by(|a,b| b.cmp(a));
-    v
+    TaskIter {
+      tasks: v,
+      pos: 0,
+    }
   }
 
   pub fn get_task<'a>(&'a self, uuid: &Uuid) -> Option<&'a Task> {
