@@ -1,4 +1,3 @@
-
 extern crate rtask;
 #[macro_use] extern crate log;
 extern crate env_logger;
@@ -9,7 +8,7 @@ use rtask::*;
 use rtask::commands::Command;
 use rtask::terminal_size::*;
 
-use std::{env, fs, fmt};
+use std::{env, fmt, fs, mem};
 use std::io::ErrorKind;
 
 pub const PID_FILE: &'static str = "tasks.pid";
@@ -181,59 +180,58 @@ fn main() {
 
   let _lock = FileLock::new(PID_FILE).expect("Failed to acquire lock");
 
-  {
-    let mut store = Storage::new().expect("Failed to open store");
-    let command = Command::from_args();
+  let mut store = Storage::new().expect("Failed to open store");
+  let command = Command::from_args();
 
-    match command {
-      Err(error) => {
-        println!("Error while parsing command: {}", error.0);
-        return;
-      },
-      Ok(command) => {
-        let mut model = store.model();
-        match  command_to_effect(&mut model, command) {
-          // TODO: Store TaskRef in these errors (and simply the naming)
-          Err(HandleCommandError::FindTaskError(FindTaskError::MultipleResults)) => {
-            println!("Multiple matching tasks found");
-          },
-          Err(HandleCommandError::FindTaskError(FindTaskError::TaskNotFound)) => {
-            println!("No matching task found");
-          },
-          Ok(None) => (),
-          Ok(Some(effect)) => {
-            // Ugh, cloning (to make the borrow checker happy)
-            let t = effect.task_id().and_then(|id| model.get_task(id)).cloned();
+  match command {
+    Err(error) => {
+      println!("Error while parsing command: {}", error.0);
+      return;
+    },
+    Ok(command) => {
+      let mut model = store.model();
+      match  command_to_effect(&mut model, command) {
+        // TODO: Store TaskRef in these errors (and simply the naming)
+        Err(HandleCommandError::FindTaskError(FindTaskError::MultipleResults)) => {
+          println!("Multiple matching tasks found");
+        },
+        Err(HandleCommandError::FindTaskError(FindTaskError::TaskNotFound)) => {
+          println!("No matching task found");
+        },
+        Ok(None) => (),
+        Ok(Some(effect)) => {
+          // Ugh, cloning (to make the borrow checker happy)
+          let t = effect.task_id().and_then(|id| model.get_task(id)).cloned();
 
-            info!("Effect: {:?}", effect);
-            model.apply_effect(effect.clone());
+          info!("Effect: {:?}", effect);
+          model.apply_effect(effect.clone());
 
-            // Print effect descriptions
-            use rtask::Effect::*;
-            match effect {
-              AddTask(ref t)       => println!("Added Task {}", t.short_id()),
-              DeleteTask(_)        => println!("Deleted task '{}'", t.unwrap().description),
-              ChangeTaskTags{ ref added, ref removed, ..} => {
-                if !added.is_empty()   { println!("Added tags {:?}",   added); }
-                if !removed.is_empty() { println!("Removed tags {:?}", removed); }
+          // Print effect descriptions
+          use rtask::Effect::*;
+          match effect {
+            AddTask(ref t)       => println!("Added Task {}", t.short_id()),
+            DeleteTask(_)        => println!("Deleted task '{}'", t.unwrap().description),
+            ChangeTaskTags{ ref added, ref removed, ..} => {
+              if !added.is_empty()   { println!("Added tags {:?}",   added); }
+              if !removed.is_empty() { println!("Removed tags {:?}", removed); }
+            }
+            ChangeTaskState(_uuid, ref state) => {
+              match *state {
+                TaskState::Done(_)     => println!("Marking task '{}' as done", t.unwrap().description),
+                TaskState::Open        => println!("Marking task '{}' as open", t.unwrap().description),
+                TaskState::Canceled(_) => println!("Marking task '{}' as canceled", t.unwrap().description),
               }
-              ChangeTaskState(_uuid, ref state) => {
-                match *state {
-                  TaskState::Done(_)     => println!("Marking task '{}' as done", t.unwrap().description),
-                  TaskState::Open        => println!("Marking task '{}' as open", t.unwrap().description),
-                  TaskState::Canceled(_) => println!("Marking task '{}' as canceled", t.unwrap().description),
-                }
-              },
-              ChangeTaskPriority(_uuid, ref priority) => {
-                println!("Changed priority of task '{}' to {}", t.unwrap().description, priority);
-              }
+            },
+            ChangeTaskPriority(_uuid, ref priority) => {
+              println!("Changed priority of task '{}' to {}", t.unwrap().description, priority);
             }
           }
         }
-      },
-    }
+      }
+    },
   }
-
+  
+  mem::drop(store);
   fs::remove_file(PID_FILE).expect("Failed to remove pid file");
 }
 
