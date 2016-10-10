@@ -59,7 +59,7 @@ impl Command {
     match *self {
       Show(ref r)                => Some(r),
       MarkDone(ref r)            => Some(r),
-      MarkCanceled(ref r)            => Some(r),
+      MarkCanceled(ref r)        => Some(r),
       Delete(ref r)              => Some(r),
       ChangePriority(ref r, _)   => Some(r),
       _                          => None
@@ -120,7 +120,6 @@ impl Command {
             Some(tags) => Ok(Command::List(tags)),
             None       => Err(ParseError(format!("Invalid arguments"))),
           }
-
         },
         Some("add") => {
           // TODO: Get rid of all this pesky cloning
