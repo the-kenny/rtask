@@ -5,7 +5,7 @@ extern crate time;
 
 use rtask::*;
 
-use rtask::commands::Command;
+use rtask::commands::{Command, Flag};
 use rtask::terminal_size::*;
 
 use std::{env, fmt, fs, mem};
@@ -142,9 +142,22 @@ fn command_to_effect(model: &mut Model,
       println!("{:?}", task);
       Ok(None)
     },
-    Command::Add(title, mut tags) => {
-      scope.as_tag().map(|t| tags.insert(t));
-      Ok(Some(Effect::AddTask(Task::new_with_tags(&title, tags))))
+    Command::Add(title, mut tags, flags) => {
+      // If in a scope, add scope-tag to `tags`
+      if let Some(tag) = scope.as_tag() {
+        tags.insert(tag);
+      }
+
+      let mut task = Task::new_with_tags(&title, tags);
+
+      // Apply flags
+      for flag in flags {
+        match flag {
+          Flag::Priority(p) => task.priority = p,
+        }
+      }
+
+      Ok(Some(Effect::AddTask(task)))
     },
     Command::Delete(r) => {
       let task = try!(model.find_task(&scope, &r));
@@ -230,7 +243,7 @@ fn main() {
       }
     },
   }
-  
+
   mem::drop(store);
   fs::remove_file(PID_FILE).expect("Failed to remove pid file");
 }
