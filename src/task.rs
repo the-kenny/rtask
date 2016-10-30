@@ -104,6 +104,7 @@ impl Task {
     let mut urgency = 0.0;
     urgency += days / 100.0; // Add 0.01 for every day since creation
     urgency += self.priority.into(); // Add priority
+    urgency += self.tags.len() as f32 / 1000.0;
 
     urgency
   }
