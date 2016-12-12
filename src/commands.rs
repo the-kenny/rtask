@@ -2,7 +2,6 @@ use ::task::*;
 use ::{TaskRef, TaskRefError};
 
 use std::env;
-use std::iter::FromIterator;
 use std::str::FromStr;
 use regex::Regex;
 
@@ -17,22 +16,37 @@ impl From<TaskRefError> for ParseError {
 
 #[derive(PartialEq, Eq, Debug)]
 pub enum Flag {
-  Priority(Priority)
+  Priority(Priority),
+  TagPositive(Tag),
+  TagNegative(Tag),
 }
 
 impl Flag {
   pub fn from_str(s: &str) -> Option<Flag> {
       lazy_static! {
-        static ref PRIORITY_RE: Regex = Regex::new("^p(riority)?:(.+)$").unwrap();
+        static ref PRIORITY_RE: Regex = Regex::new("^p(?:riority)?:(.+)$").unwrap();
+        static ref TAG_POS_RE:  Regex = Regex::new("^\\+(.+)$").unwrap();
+        static ref TAG_NEG_RE:  Regex = Regex::new("^-(.+)$").unwrap();
       }
 
+    // TODO: Write a loop
     let priority = PRIORITY_RE.captures(s).and_then(|cs| {
-      cs.at(2)
+      cs.at(1)
         .and_then(|s| Priority::from_str(s).ok())
         .map(Flag::Priority)
     });
 
-    priority
+    let pos_tag = TAG_POS_RE.captures(s)
+      .and_then(|cs| cs.at(1))
+      .map(String::from)
+      .map(Flag::TagPositive);
+
+    let neg_tag = TAG_NEG_RE.captures(s)
+      .and_then(|cs| cs.at(1))
+      .map(String::from)
+      .map(Flag::TagNegative);
+
+    priority.or(pos_tag).or(neg_tag)
   }
 }
 
@@ -40,7 +54,7 @@ impl Flag {
 pub enum Command {
   List(Tags),
   Show(TaskRef),
-  Add(Title, Tags, Vec<Flag>),
+  Add(Title, Vec<Flag>),
   MarkDone(TaskRef),
   MarkCanceled(TaskRef),
   Delete(TaskRef),
@@ -111,41 +125,37 @@ impl Command {
     } else {
       match args.get(0).map(|s| s.as_ref()) {
         None | Some("list") => {
-          let tags: Option<Tags> = args.iter()
+          let tags = args.iter()
             .skip(1)
-            .map(|s| s.as_added_tag())
-            .collect();
+            .map(|s| {
+              match Flag::from_str(&s[..]) {
+                Some(Flag::TagPositive(t)) => Ok(t),
+                _ => Err(ParseError(format!("Invalid argument {:?}", s))),
+              }
+            })
+            .collect::<Result<Tags, ParseError>>();
 
-          match tags {
-            Some(tags) => Ok(Command::List(tags)),
-            None       => Err(ParseError(format!("Invalid arguments"))),
-          }
+          tags.map(Command::List)
         },
         Some("add") => {
           // TODO: Get rid of all this pesky cloning
 
           let params = args.iter().skip(1);
 
-          let tags: Tags = Tags::from_iter(
-            params.clone()      // Ugh
-              .into_iter()
-              .flat_map(|s| s.as_added_tag()));
-
           let flags: Vec<Flag> = params.clone()
             .flat_map(|s| Flag::from_str(&s))
             .collect();
 
           let title = params.clone()
-            .filter(|p| p.as_tag().is_none())      // Ugh
             .filter(|p| Flag::from_str(p).is_none()) // Ugh
             .fold(String::new(), |acc, arg| acc + " " + arg)
             .trim()
             .to_string();
 
           if title != "" {
-            debug!("title: {:?}, tags: {:?}, flags: {:?}", title, tags, flags);
+            debug!("title: {:?}, flags: {:?}", title, flags);
 
-            Ok(Command::Add(title, tags, flags))
+            Ok(Command::Add(title, flags))
           } else {
             Err(ParseError("Failed to parse parameters".into()))
           }
@@ -193,10 +203,10 @@ mod tests {
   #[test]
   fn test_add() {
     let c = Command::from_slice(&vec!["add".to_string(), "foo".to_string()]);
-    assert_eq!(c, Ok(Command::Add("foo".to_string(), Tags::new(), vec![])));
+    assert_eq!(c, Ok(Command::Add("foo".to_string(), vec![])));
 
     let c = Command::from_slice(&vec!["add".to_string(), "foo".to_string(), "bar".to_string()]);
-    assert_eq!(c, Ok(Command::Add("foo bar".to_string(), Tags::new(), vec![])));
+    assert_eq!(c, Ok(Command::Add("foo bar".to_string(), vec![])));
   }
 
   #[test]
@@ -206,11 +216,11 @@ mod tests {
                       "my title containing +42".into(),
                       "priority:h".into(),
                       "+42 foo".into()];
-    if let Command::Add(title, tags, flags) = Command::from_slice(&params).unwrap() {
+    if let Command::Add(title, flags) = Command::from_slice(&params).unwrap() {
       assert_eq!(title, "my title containing +42");
-      assert!(tags.contains("42 foo"));
-      assert!(tags.contains("foo"));
-      assert_eq!(flags, vec![Flag::Priority(Priority::High)]);
+      assert_eq!(flags, vec![Flag::TagPositive("foo".into()),
+                             Flag::Priority(Priority::High),
+                             Flag::TagPositive("42 foo".into())]);
     } else {
       assert!(false, "Command parsing failed");
     }

@@ -55,7 +55,7 @@ fn command_to_effect(model: &mut Model,
   info!("Command (prior scope handling): {:?}", command);
   let scope = Scope(env::var("RTASK_SCOPE").ok());
 
-  info!("Using scope {}", scope);
+  info!("Using scope {:?}", scope);
 
   match command {
     Command::List(mut tags) => {
@@ -142,18 +142,24 @@ fn command_to_effect(model: &mut Model,
       println!("{:?}", task);
       Ok(None)
     },
-    Command::Add(title, mut tags, flags) => {
+    Command::Add(title, flags) => {
       // If in a scope, add scope-tag to `tags`
-      if let Some(tag) = scope.as_tag() {
-        tags.insert(tag);
-      }
+      let tags = if let Some(tag) = scope.as_tag() {
+        vec![tag]
+      } else {
+        vec![]
+      };
 
-      let mut task = Task::new_with_tags(&title, tags);
+      info!("Got flags: {:?}", flags);
+
+      let mut task = Task::new_with_tags(&title, tags.into_iter().collect());
 
       // Apply flags
       for flag in flags {
         match flag {
           Flag::Priority(p) => task.priority = p,
+          Flag::TagPositive(t) => { task.tags.insert(t); },
+          Flag::TagNegative(t) => { task.tags.remove(&t); },
         }
       }
 
