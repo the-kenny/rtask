@@ -76,8 +76,14 @@ pub enum Command {
   MarkDone(TaskRef),
   MarkCanceled(TaskRef),
   Delete(TaskRef),
-  ChangePriority(TaskRef, Priority),
-  ChangeTags{ task_ref: TaskRef, added: Tags, removed: Tags},
+  // This Command is used to apply multiple state changes coming from
+  // a set of CLI flags (`Flag`)
+  ChangeTaskProperties {
+    task_ref:     TaskRef,
+    added_tags:   Option<Tags>,
+    removed_tags: Option<Tags>,
+    priority:     Option<Priority>,
+  },
 }
 
 impl Command {
@@ -86,30 +92,25 @@ impl Command {
     Self::from_slice(&args)
   }
 
-  pub fn task_ref<'a>(&'a self) -> Option<&'a TaskRef> {
-    use self::Command::*;
-    match *self {
-      Show(ref r)                => Some(r),
-      MarkDone(ref r)            => Some(r),
-      MarkCanceled(ref r)        => Some(r),
-      Delete(ref r)              => Some(r),
-      ChangePriority(ref r, _)   => Some(r),
-      _                          => None
-    }
-  }
-
   fn from_slice(args: &[String]) -> Result<Self, ParseError> {
     // Try to parse args[0] as TaskRef first
     if let Some(tr) = args.get(0).and_then(|s| TaskRef::from_str(s).ok()) {
       match args.get(1).map(|s| s.as_ref()) {
-        None             => Ok(Command::Show(tr)),
+        None             => {
+          Ok(Command::Show(tr))
+        },
         Some("show")     => Ok(Command::Show(tr)),
         Some("done")     => Ok(Command::MarkDone(tr)),
         Some("cancel")   => Ok(Command::MarkCanceled(tr)),
         Some("delete")   => Ok(Command::Delete(tr)),
         Some("priority") => {
           if let Some(priority) = args.get(2).and_then(|s| Priority::from_str(&s).ok()) {
-            Ok(Command::ChangePriority(tr, priority))
+            Ok(Command::ChangeTaskProperties {
+              task_ref: tr,
+              priority: Some(priority),
+              added_tags: None,
+              removed_tags: None,
+            })
           } else {
             Err(ParseError("Failed to parse priority".into()))
           }
@@ -130,10 +131,11 @@ impl Command {
           }
 
           if added.is_disjoint(&removed) {
-            Ok(Command::ChangeTags{
+            Ok(Command::ChangeTaskProperties {
               task_ref: tr,
-              added: added,
-              removed: removed,
+              added_tags: Some(added),
+              removed_tags: Some(removed),
+              priority: None,
             })
           } else {
             Err(ParseError(format!("Tags to add must be disjoing from tags to remove")))
@@ -158,7 +160,6 @@ impl Command {
         },
         Some("add") => {
           // TODO: Get rid of all this pesky cloning
-
           let params = args.iter().skip(1);
 
           let flags = params.clone()

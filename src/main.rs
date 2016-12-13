@@ -48,10 +48,9 @@ impl From<FindTaskError> for HandleCommandError {
   }
 }
 
-fn command_to_effect(model: &mut Model,
-                     command: Command)
-                     -> Result<Option<Effect>, HandleCommandError> {
-
+fn command_to_effects(model: &mut Model,
+                      command: Command)
+                      -> Result<Vec<Effect>, HandleCommandError> {
   info!("Command (prior scope handling): {:?}", command);
   let scope = Scope(env::var("RTASK_SCOPE").ok());
 
@@ -128,7 +127,7 @@ fn command_to_effect(model: &mut Model,
         println!("No matching tasks found");
       }
 
-      Ok(None)
+      Ok(vec![])
     },
     Command::Show(r) => {
       let task = try!(model.find_task(&scope, &r));
@@ -140,7 +139,7 @@ fn command_to_effect(model: &mut Model,
       }
 
       println!("{:?}", task);
-      Ok(None)
+      Ok(vec![])
     },
     Command::Add(title, flags) => {
       // If in a scope, add scope-tag to `tags`
@@ -157,33 +156,35 @@ fn command_to_effect(model: &mut Model,
         flag.apply_to(&mut task);
       }
 
-      Ok(Some(Effect::AddTask(task)))
+      Ok(vec![Effect::AddTask(task)])
     },
     Command::Delete(r) => {
       let task = try!(model.find_task(&scope, &r));
-      Ok(Some(Effect::DeleteTask(task.uuid.clone())))
+      Ok(vec![Effect::DeleteTask(task.uuid.clone())])
     },
     Command::MarkDone(r) => {
       let task = try!(model.find_task(&scope, &r));
-      Ok(Some(Effect::ChangeTaskState(task.uuid.clone(), TaskState::Done(time::get_time()))))
+      Ok(vec![Effect::ChangeTaskState(task.uuid.clone(), TaskState::Done(time::get_time()))])
     },
     Command::MarkCanceled(r) => {
       let task = try!(model.find_task(&scope, &r));
-      Ok(Some(Effect::ChangeTaskState(task.uuid.clone(), TaskState::Canceled(time::get_time()))))
+      Ok(vec![Effect::ChangeTaskState(task.uuid.clone(), TaskState::Canceled(time::get_time()))])
     },
-    Command::ChangePriority(r, p) => {
-      let task = try!(model.find_task(&scope, &r));
-      Ok(Some(Effect::ChangeTaskPriority(task.uuid.clone(), p)))
-    },
-    Command::ChangeTags{ task_ref, added, removed } => {
+    Command::ChangeTaskProperties { task_ref, added_tags, removed_tags, priority } => {
       let task = try!(model.find_task(&scope, &task_ref));
-      // TODO: Warn when scope-tags are removed
-      Ok(Some(Effect::ChangeTaskTags{
+
+      let mut effects = vec![];
+      if let Some(p) = priority {
+        effects.push(Effect::ChangeTaskPriority(task.uuid.clone(), p));
+      }
+      effects.push(Effect::ChangeTaskTags {
         uuid: task.uuid.clone(),
-        added: added,
-        removed: removed,
-      }))
-    }
+        added: added_tags.unwrap_or(Tags::new()),
+        removed: removed_tags.unwrap_or(Tags::new()),
+      });
+
+      Ok(effects)
+    },
   }
 }
 
@@ -203,7 +204,7 @@ fn main() {
     },
     Ok(command) => {
       let mut model = store.model();
-      match  command_to_effect(&mut model, command) {
+      match command_to_effects(&mut model, command) {
         // TODO: Store TaskRef in these errors (and simply the naming)
         Err(HandleCommandError::FindTaskError(FindTaskError::MultipleResults)) => {
           println!("Multiple matching tasks found");
@@ -211,32 +212,33 @@ fn main() {
         Err(HandleCommandError::FindTaskError(FindTaskError::TaskNotFound)) => {
           println!("No matching task found");
         },
-        Ok(None) => (),
-        Ok(Some(effect)) => {
-          // Ugh, cloning (to make the borrow checker happy)
-          let t = effect.task_id().and_then(|id| model.get_task(id)).cloned();
+        Ok(effects) => {
+          for effect in effects {
+            // Ugh, cloning (to make the borrow checker happy)
+            let t = effect.task_id().and_then(|id| model.get_task(id)).cloned();
 
-          info!("Effect: {:?}", effect);
-          model.apply_effect(effect.clone());
+            info!("Effect: {:?}", effect);
+            model.apply_effect(effect.clone());
 
-          // Print effect descriptions
-          use rtask::Effect::*;
-          match effect {
-            AddTask(ref t)       => println!("Added Task {}", t.short_id()),
-            DeleteTask(_)        => println!("Deleted task '{}'", t.unwrap().description),
-            ChangeTaskTags{ ref added, ref removed, ..} => {
-              if !added.is_empty()   { println!("Added tags {:?}",   added); }
-              if !removed.is_empty() { println!("Removed tags {:?}", removed); }
-            }
-            ChangeTaskState(_uuid, ref state) => {
-              match *state {
-                TaskState::Done(_)     => println!("Marking task '{}' as done", t.unwrap().description),
-                TaskState::Open        => println!("Marking task '{}' as open", t.unwrap().description),
-                TaskState::Canceled(_) => println!("Marking task '{}' as canceled", t.unwrap().description),
+            // Print effect descriptions
+            use rtask::Effect::*;
+            match effect {
+              AddTask(ref t)       => println!("Added Task {}", t.short_id()),
+              DeleteTask(_)        => println!("Deleted task '{}'", t.unwrap().description),
+              ChangeTaskTags{ ref added, ref removed, ..} => {
+                if !added.is_empty()   { println!("Added tags {:?}",   added); }
+                if !removed.is_empty() { println!("Removed tags {:?}", removed); }
               }
-            },
-            ChangeTaskPriority(_uuid, ref priority) => {
-              println!("Changed priority of task '{}' to {}", t.unwrap().description, priority);
+              ChangeTaskState(_uuid, ref state) => {
+                match *state {
+                  TaskState::Done(_)     => println!("Marking task '{}' as done", t.unwrap().description),
+                  TaskState::Open        => println!("Marking task '{}' as open", t.unwrap().description),
+                  TaskState::Canceled(_) => println!("Marking task '{}' as canceled", t.unwrap().description),
+                }
+              },
+              ChangeTaskPriority(_uuid, ref priority) => {
+                println!("Changed priority of task '{}' to {}", t.unwrap().description, priority);
+              }
             }
           }
         }
