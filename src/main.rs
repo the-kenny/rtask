@@ -5,7 +5,7 @@ extern crate time;
 
 use rtask::*;
 
-use rtask::commands::{Command, Flag};
+use rtask::commands::{Command};
 use rtask::terminal_size::*;
 
 use std::{env, fmt, fs, mem};
@@ -153,14 +153,8 @@ fn command_to_effect(model: &mut Model,
       info!("Got flags: {:?}", flags);
 
       let mut task = Task::new_with_tags(&title, tags.into_iter().collect());
-
-      // Apply flags
       for flag in flags {
-        match flag {
-          Flag::Priority(p) => task.priority = p,
-          Flag::TagPositive(t) => { task.tags.insert(t); },
-          Flag::TagNegative(t) => { task.tags.remove(&t); },
-        }
+        flag.apply_to(&mut task);
       }
 
       Ok(Some(Effect::AddTask(task)))

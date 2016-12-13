@@ -48,6 +48,24 @@ impl Flag {
 
     priority.or(pos_tag).or(neg_tag)
   }
+
+  pub fn matches(&self, t: &Task) -> bool {
+    use self::Flag::*;
+    match *self {
+      Priority(p)          => t.priority == p,
+      TagPositive(ref tag) => t.tags.contains(tag),
+      TagNegative(ref tag) => !t.tags.contains(tag),
+    }
+  }
+
+  pub fn apply_to(&self, t: &mut Task) {
+    use self::Flag::*;
+    match *self {
+      Priority(p)          => { t.priority = p; },
+      TagPositive(ref tag) => { t.tags.insert(tag.clone()); },
+      TagNegative(ref tag) => { t.tags.remove(tag); },
+    }
+  }
 }
 
 #[derive(PartialEq, Eq, Debug)]
@@ -97,6 +115,7 @@ impl Command {
           }
         },
         Some("tag") => {
+          // TODO: Handle this via `Flag`
           let mut added   = Tags::new();
           let mut removed = Tags::new();
           for t in args.iter().skip(2).cloned() {
@@ -142,7 +161,7 @@ impl Command {
 
           let params = args.iter().skip(1);
 
-          let flags: Vec<Flag> = params.clone()
+          let flags = params.clone()
             .flat_map(|s| Flag::from_str(&s))
             .collect();
 
