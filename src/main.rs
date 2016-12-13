@@ -179,8 +179,8 @@ fn command_to_effects(model: &mut Model,
       }
       effects.push(Effect::ChangeTaskTags {
         uuid: task.uuid.clone(),
-        added: added_tags.unwrap_or(Tags::new()),
-        removed: removed_tags.unwrap_or(Tags::new()),
+        added: added_tags,
+        removed: removed_tags,
       });
 
       Ok(effects)

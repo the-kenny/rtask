@@ -30,11 +30,10 @@ impl Flag {
       }
 
     // TODO: Write a loop
-    let priority = PRIORITY_RE.captures(s).and_then(|cs| {
-      cs.at(1)
-        .and_then(|s| Priority::from_str(s).ok())
-        .map(Flag::Priority)
-    });
+    let priority = PRIORITY_RE.captures(s)
+      .and_then(|cs| cs.at(1))
+      .and_then(|s| Priority::from_str(s).ok())
+      .map(Flag::Priority);
 
     let pos_tag = TAG_POS_RE.captures(s)
       .and_then(|cs| cs.at(1))
@@ -80,8 +79,8 @@ pub enum Command {
   // a set of CLI flags (`Flag`)
   ChangeTaskProperties {
     task_ref:     TaskRef,
-    added_tags:   Option<Tags>,
-    removed_tags: Option<Tags>,
+    added_tags:   Tags,
+    removed_tags: Tags,
     priority:     Option<Priority>,
   },
 }
@@ -95,53 +94,47 @@ impl Command {
   fn from_slice(args: &[String]) -> Result<Self, ParseError> {
     // Try to parse args[0] as TaskRef first
     if let Some(tr) = args.get(0).and_then(|s| TaskRef::from_str(s).ok()) {
-      match args.get(1).map(|s| s.as_ref()) {
-        None             => {
+      let first_arg = args.get(1).clone();
+      match first_arg.map(|s| s.as_ref()) {
+        None => {
           Ok(Command::Show(tr))
         },
         Some("show")     => Ok(Command::Show(tr)),
         Some("done")     => Ok(Command::MarkDone(tr)),
         Some("cancel")   => Ok(Command::MarkCanceled(tr)),
         Some("delete")   => Ok(Command::Delete(tr)),
-        Some("priority") => {
-          if let Some(priority) = args.get(2).and_then(|s| Priority::from_str(&s).ok()) {
-            Ok(Command::ChangeTaskProperties {
-              task_ref: tr,
-              priority: Some(priority),
-              added_tags: None,
-              removed_tags: None,
-            })
-          } else {
-            Err(ParseError("Failed to parse priority".into()))
-          }
-        },
-        Some("tag") => {
-          // TODO: Handle this via `Flag`
-          let mut added   = Tags::new();
-          let mut removed = Tags::new();
-          for t in args.iter().skip(2).cloned() {
-            if let Some((direction, tag)) = t.as_tag() {
-              match direction {
-                TagDirection::Added   => added.insert(tag),
-                TagDirection::Removed => removed.insert(tag),
-              };
-            } else {
-              return Err(ParseError(format!("Usage: <task-ref> tag +foo -bar")))
-            }
-          }
+        Some(cmd) => {
+          // Parse 'args' as flags
+          let flags = args.iter()
+            .skip(1)
+            .map(|s| Flag::from_str(s.as_ref()))
+            .collect::<Vec<Option<Flag>>>();
 
-          if added.is_disjoint(&removed) {
+          if !flags.is_empty() {
+            let mut added = Tags::new();
+            let mut removed = Tags::new();
+            let mut priority = None;
+
+            info!("Got flags for task {}: {:?}", tr, flags);
+            for flag in flags.into_iter() {
+              match flag {
+                None => return Err(ParseError(format!("Invalid flag set '{:?}'", args))),
+                Some(Flag::Priority(p)) => priority = Some(p),
+                Some(Flag::TagPositive(t)) => { added.insert(t); },
+                Some(Flag::TagNegative(t)) => { removed.insert(t); },
+              }
+            }
+
             Ok(Command::ChangeTaskProperties {
               task_ref: tr,
-              added_tags: Some(added),
-              removed_tags: Some(removed),
-              priority: None,
+              added_tags: added,
+              removed_tags: removed,
+              priority: priority,
             })
           } else {
-            Err(ParseError(format!("Tags to add must be disjoing from tags to remove")))
+            Err(ParseError(format!("Invalid command '{}'", cmd)))
           }
         }
-        Some(cmd) => Err(ParseError(format!("Invalid command '{}'", cmd)))
       }
     } else {
       match args.get(0).map(|s| s.as_ref()) {
