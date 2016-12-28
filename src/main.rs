@@ -57,20 +57,24 @@ fn command_to_effects(model: &mut Model,
   info!("Using scope {:?}", scope);
 
   match command {
-    Command::List(mut tags) => {
+    Command::List(mut flags) => {
       use rtask::printer::*;
+      use rtask::commands::Flag;
 
-      scope.as_tag().map(|t| tags.insert(t));
+      scope.as_tag().map(|t| flags.push(Flag::TagPositive(t)));
 
-      info!("Listing filtered by tags {:?}", tags);
+      info!("Listing filtered by flags {:?}", flags);
 
-      if !tags.is_empty() {
-        println!("Listing all tasks with tag(s) {:?}", tags);
+      if !flags.is_empty() {
+        let flags = flags.iter().map(|f| format!("{}", f))
+          .collect::<Vec<String>>()
+          .join(", ");
+        println!("Listing all tasks with flags {}", flags);
       }
 
       let task_ids: Vec<_> = model.all_tasks().into_iter()
         .filter(|t| t.is_open())
-        .filter(|t| tags.is_empty() || tags.is_subset(&t.tags))
+        .filter(|t| flags.is_empty() || flags.iter().all(|f| f.matches(&t)))
         .map(|t| t.uuid)
         .collect();
 

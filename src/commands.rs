@@ -1,7 +1,7 @@
 use ::task::*;
 use ::{TaskRef, TaskRefError};
 
-use std::env;
+use std::{env, fmt};
 use std::str::FromStr;
 use regex::Regex;
 
@@ -22,12 +22,14 @@ pub enum Flag {
 }
 
 impl Flag {
-  pub fn from_str(s: &str) -> Option<Flag> {
+  pub fn from_str<S: AsRef<str>>(s: S) -> Option<Flag> {
       lazy_static! {
         static ref PRIORITY_RE: Regex = Regex::new("^p(?:riority)?:(.+)$").unwrap();
         static ref TAG_POS_RE:  Regex = Regex::new("^\\+(.+)$").unwrap();
         static ref TAG_NEG_RE:  Regex = Regex::new("^-(.+)$").unwrap();
       }
+
+    let s = s.as_ref();
 
     // TODO: Write a loop
     let priority = PRIORITY_RE.captures(s)
@@ -67,9 +69,20 @@ impl Flag {
   }
 }
 
+impl fmt::Display for Flag {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    use self::Flag::*;
+    match *self {
+      Priority(ref p)    => f.write_fmt(format_args!("priority:{}", p)),
+      TagPositive(ref t) => f.write_fmt(format_args!("+{}", t)),
+      TagNegative(ref t) => f.write_fmt(format_args!("-{}", t)),
+    }
+  }
+}
+
 #[derive(PartialEq, Eq, Debug)]
 pub enum Command {
-  List(Tags),
+  List(Vec<Flag>),
   Show(TaskRef),
   Add(Title, Vec<Flag>),
   MarkDone(TaskRef),
@@ -107,7 +120,7 @@ impl Command {
           // Parse 'args' as flags
           let flags = args.iter()
             .skip(1)
-            .map(|s| Flag::from_str(s.as_ref()))
+            .map(Flag::from_str)
             .collect::<Vec<Option<Flag>>>();
 
           if !flags.is_empty() {
@@ -139,17 +152,12 @@ impl Command {
     } else {
       match args.get(0).map(|s| s.as_ref()) {
         None | Some("list") => {
-          let tags = args.iter()
+          let flags = args.iter()
             .skip(1)
-            .map(|s| {
-              match Flag::from_str(&s[..]) {
-                Some(Flag::TagPositive(t)) => Ok(t),
-                _ => Err(ParseError(format!("Invalid argument {:?}", s))),
-              }
-            })
-            .collect::<Result<Tags, ParseError>>();
+            .map(Flag::from_str)
+            .collect::<Option<Vec<Flag>>>();
 
-          tags.map(Command::List)
+          flags.map(Command::List).ok_or(ParseError(format!("Found invalid flags: {:?}", args)))
         },
         Some("add") => {
           // TODO: Get rid of all this pesky cloning
@@ -183,16 +191,15 @@ impl Command {
 mod tests {
   use super::*;
   use ::task::*;
-  use std::iter::FromIterator;
 
   #[test]
   fn test_list() {
     let c = Command::from_slice(&vec!["list".to_string()]);
-    assert_eq!(c, Ok(Command::List(Tags::new())));
+    assert_eq!(c, Ok(Command::List(Default::default())));
 
     let c = Command::from_slice(&vec!["list".to_string(),
                                     "+foo".to_string()]);
-    assert_eq!(c, Ok(Command::List(Tags::from_iter(vec!["foo".into()]))));
+    assert_eq!(c, Ok(Command::List(vec![Flag::TagPositive("foo".into())])));
 
     let c = Command::from_slice(&vec!["list".to_string(),
                                     "unimplemented_filter".to_string()]);
@@ -242,6 +249,6 @@ mod tests {
   #[test]
   fn test_default() {
     let c = Command::from_slice(&vec![]);
-    assert_eq!(c, Ok(Command::List(Tags::new())));
+    assert_eq!(c, Ok(Command::List(Default::default())));
   }
 }
