@@ -3,6 +3,7 @@ use ::{TaskRef, TaskRefError};
 
 use std::{env, fmt};
 use std::str::FromStr;
+use std::fmt::Debug;
 use regex::Regex;
 
 #[derive(Debug, PartialEq, Eq)]
@@ -104,9 +105,9 @@ impl Command {
     Self::from_slice(&args)
   }
 
-  fn from_slice(args: &[String]) -> Result<Self, ParseError> {
+  fn from_slice<S: Debug + AsRef<str>>(args: &[S]) -> Result<Self, ParseError> {
     // Try to parse args[0] as TaskRef first
-    if let Some(tr) = args.get(0).and_then(|s| TaskRef::from_str(s).ok()) {
+    if let Some(tr) = args.get(0).and_then(|s| TaskRef::from_str(s.as_ref()).ok()) {
       let first_arg = args.get(1).clone();
       match first_arg.map(|s| s.as_ref()) {
         None => {
@@ -169,7 +170,7 @@ impl Command {
 
           let title = params.clone()
             .filter(|p| Flag::from_str(p).is_none()) // Ugh
-            .fold(String::new(), |acc, arg| acc + " " + arg)
+            .fold(String::new(), |acc, arg| acc + " " + arg.as_ref())
             .trim()
             .to_string();
 
@@ -194,48 +195,56 @@ mod tests {
 
   #[test]
   fn test_list() {
-    let c = Command::from_slice(&vec!["list".to_string()]);
+    let c = Command::from_slice(&["list"]);
     assert_eq!(c, Ok(Command::List(Default::default())));
 
-    let c = Command::from_slice(&vec!["list".to_string(),
-                                    "+foo".to_string()]);
+    let c = Command::from_slice(&["list", "+foo"]);
     assert_eq!(c, Ok(Command::List(vec![Flag::TagPositive("foo".into())])));
 
-    let c = Command::from_slice(&vec!["list".to_string(),
-                                    "unimplemented_filter".to_string()]);
+    let c = Command::from_slice(&["list", "-foo"]);
+    assert_eq!(c, Ok(Command::List(vec![Flag::TagNegative("foo".into())])));
+
+    let c = Command::from_slice(&["list",
+                                  "+foo",
+                                  "-bar",
+                                  "p:h"]);
+    assert_eq!(c, Ok(Command::List(vec![Flag::TagPositive("foo".into()),
+                                        Flag::TagNegative("bar".into()),
+                                        Flag::Priority(Priority::High)])));
+    
+    
+    let c = Command::from_slice(&["list",
+                                  "unimplemented"]);
     assert!(c.is_err());
   }
 
   #[test]
   #[ignore]
   fn test_show() {
-    // let c = Command::from_slice(&vec!["show".to_string(), "foo".to_string()]);
-    // assert_eq!(c, Some(Command::Show("foo".to_string())));
+    unimplemented!()
+    // let c = Command::from_slice(&vec!["show", "foo"]);
+    // assert_eq!(c, Some(Command::Show("foo".into())));
 
-    // let c = Command::from_slice(&vec!["show".to_string()]);
+    // let c = Command::from_slice(&vec!["show"]);
     // assert_eq!(c, None);
 
-    // let c = Command::from_slice(&vec!["show".to_string(), "asdfsafd".to_string()]);
-    // assert_eq!(c, Some(Command::Show("asdfsafd".to_string())));
+    // let c = Command::from_slice(&vec!["show", "asdfsafd"]);
+    // assert_eq!(c, Some(Command::Show("asdfsafd".into())));
   }
 
 
   #[test]
   fn test_add() {
-    let c = Command::from_slice(&vec!["add".to_string(), "foo".to_string()]);
-    assert_eq!(c, Ok(Command::Add("foo".to_string(), vec![])));
+    let c = Command::from_slice(&vec!["add", "foo"]);
+    assert_eq!(c, Ok(Command::Add("foo".into(), vec![])));
 
-    let c = Command::from_slice(&vec!["add".to_string(), "foo".to_string(), "bar".to_string()]);
-    assert_eq!(c, Ok(Command::Add("foo bar".to_string(), vec![])));
+    let c = Command::from_slice(&vec!["add", "foo", "bar"]);
+    assert_eq!(c, Ok(Command::Add("foo bar".into(), vec![])));
   }
 
   #[test]
   fn test_tag_flag_semantics() {
-    let params = vec!["add".into(),
-                      "+foo".into(),
-                      "my title containing +42".into(),
-                      "priority:h".into(),
-                      "+42 foo".into()];
+    let params = vec!["add", "+foo", "my title containing +42", "priority:h", "+42 foo"];
     if let Command::Add(title, flags) = Command::from_slice(&params).unwrap() {
       assert_eq!(title, "my title containing +42");
       assert_eq!(flags, vec![Flag::TagPositive("foo".into()),
@@ -248,7 +257,8 @@ mod tests {
 
   #[test]
   fn test_default() {
-    let c = Command::from_slice(&vec![]);
+    let empty: [&'static str; 0] = [];
+    let c = Command::from_slice(&empty);
     assert_eq!(c, Ok(Command::List(Default::default())));
   }
 }
