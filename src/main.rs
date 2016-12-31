@@ -196,7 +196,8 @@ fn main() {
   env_logger::init().unwrap();
   chdir();
 
-  let _lock = FileLock::new(PID_FILE).expect("Failed to acquire lock");
+  let mut lock = FileLock::new(PID_FILE).expect("Failed to acquire lock");
+  lock.delete_on_drop = true;
 
   let mut store = Storage::new().expect("Failed to open store");
   let command = Command::from_args();
@@ -251,7 +252,6 @@ fn main() {
   }
 
   mem::drop(store);
-  fs::remove_file(PID_FILE).expect("Failed to remove pid file");
 }
 
 fn chdir() {
