@@ -140,7 +140,24 @@ fn command_to_effects(model: &mut Model,
         _ => ()
       }
 
-      println!("{:?}", task);
+      macro_rules! p {
+        ( $( $p:ident ),* ) => {
+          $(
+            println!("{:<15} {:?}", stringify!($p), task.$p);
+          )*
+        }
+      }
+
+      p!(
+        uuid,
+        description,
+        priority,
+        created,
+        modified,
+        tags,
+        extras
+      );
+
       Ok(vec![])
     },
     Command::Add(title, flags) => {
@@ -283,7 +300,7 @@ fn chdir() {
 #[cfg(test)]
 mod tests {
   use super::rtask::*;
-  
+
   #[test]
   fn test_command_to_effect_no_noop_effects() {
     let mut m = Model::new();
@@ -296,7 +313,7 @@ mod tests {
       removed_tags: Tags::new(),
       priority: None,
     };
-    
+
     let effects = super::command_to_effects(&mut m, c).unwrap();
     assert!(effects.is_empty());
   }
