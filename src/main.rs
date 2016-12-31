@@ -4,8 +4,6 @@ extern crate env_logger;
 extern crate time;
 
 use rtask::*;
-
-use rtask::commands::{Command};
 use rtask::terminal_size::*;
 
 use std::{env, fmt, fs, mem};
@@ -181,11 +179,14 @@ fn command_to_effects(model: &mut Model,
       if let Some(p) = priority {
         effects.push(Effect::ChangeTaskPriority(task.uuid.clone(), p));
       }
-      effects.push(Effect::ChangeTaskTags {
-        uuid: task.uuid.clone(),
-        added: added_tags,
-        removed: removed_tags,
-      });
+
+      if !added_tags.is_empty() || !removed_tags.is_empty() {
+        effects.push(Effect::ChangeTaskTags {
+          uuid: task.uuid.clone(),
+          added: added_tags,
+          removed: removed_tags,
+        });
+      }
 
       Ok(effects)
     },
@@ -277,4 +278,26 @@ fn chdir() {
   }
 
   env::set_current_dir(&dir).expect("Couldn't chdir");
+}
+
+#[cfg(test)]
+mod tests {
+  use super::rtask::*;
+  
+  #[test]
+  fn test_command_to_effect_no_noop_effects() {
+    let mut m = Model::new();
+    let t = Task::new("bar");
+    m.apply_effect(Effect::AddTask(t.clone()));
+
+    let c = Command::ChangeTaskProperties {
+      task_ref: t.uuid.into(),
+      added_tags: Tags::new(),
+      removed_tags: Tags::new(),
+      priority: None,
+    };
+    
+    let effects = super::command_to_effects(&mut m, c).unwrap();
+    assert!(effects.is_empty());
+  }
 }

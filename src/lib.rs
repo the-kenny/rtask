@@ -17,6 +17,7 @@ pub mod task;
 pub mod task_ref;
 pub mod terminal_size;
 
+pub use commands::*;
 pub use task::*;
 pub use model::*;
 pub use task_ref::*;
