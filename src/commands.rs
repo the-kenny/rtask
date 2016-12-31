@@ -151,15 +151,8 @@ impl Command {
         }
       }
     } else {
-      match args.get(0).map(|s| s.as_ref()) {
-        None | Some("list") => {
-          let flags = args.iter()
-            .skip(1)
-            .map(Flag::from_str)
-            .collect::<Option<Vec<Flag>>>();
-
-          flags.map(Command::List).ok_or(ParseError(format!("Found invalid flags: {:?}", args)))
-        },
+      let arg0 = args.get(0).map(|s| s.as_ref());
+      match arg0 {
         Some("add") => {
           // TODO: Get rid of all this pesky cloning
           let params = args.iter().skip(1);
@@ -182,7 +175,20 @@ impl Command {
             Err(ParseError("Failed to parse parameters".into()))
           }
         },
-        Some(v) => Err(ParseError(format!("Unknown command {}", v)))
+        _ => {
+          // Skip first arg if it's "list";
+          let args = if arg0 == Some("list") {
+            &args[1..]
+          } else {
+            &args[..]
+          };
+          
+          let flags = args.iter()
+            .map(Flag::from_str)
+            .collect::<Option<Vec<Flag>>>();
+          
+          flags.map(Command::List).ok_or(ParseError(format!("Found invalid flags: {:?}", args)))
+        },
       }
     }
   }
