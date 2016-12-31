@@ -22,9 +22,12 @@ pub use model::*;
 pub use task_ref::*;
 pub use file_lock::FileLock;
 
-pub mod storage_engine;
-pub use storage_engine::*;
+pub trait StorageEngine: Sized + Drop {
+  type LoadErr;
+  // fn load_from<P: AsRef<Path>>(dir: P) -> Result<Self, Self::LoadErr>;
+  fn new() -> Result<Self, Self::LoadErr>;
+  fn model<'a>(&'a mut self) -> &'a mut Model;
+}
 
 mod sqlite_storage;
-
 pub type Storage = sqlite_storage::SqliteStorage;
