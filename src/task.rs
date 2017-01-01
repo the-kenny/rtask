@@ -8,6 +8,7 @@ pub type Time     = time::Timespec;
 pub type Uuid     = uuid::Uuid;
 pub type Tag      = String;
 pub type Tags     = HashSet<Tag>;
+// TODO: Get rid of `ExtraMap`?
 pub type ExtraMap = HashMap<ExtraData, String>;
 
 pub struct Age(time::Duration);

@@ -2,6 +2,8 @@ use ::task::*;
 use ::task_ref::TaskRef;
 use std::collections::{BTreeMap, HashMap};
 
+type CustomTag = String;
+
 #[derive(Clone, Debug, PartialEq, Eq,
          RustcEncodable, RustcDecodable)]
 pub enum Effect {
@@ -10,7 +12,7 @@ pub enum Effect {
   ChangeTaskState(Uuid, TaskState),
   ChangeTaskPriority(Uuid, Priority),
   DeleteTask(Uuid),
-  CustomEvent { tag: String, data: String },
+  CustomEffect(CustomTag, String),
 }
 
 impl Effect {
@@ -24,7 +26,7 @@ impl Effect {
       ChangeTaskState(ref u, _)      => Some(u),
       ChangeTaskPriority(ref u, _)   => Some(u),
       DeleteTask(ref u)              => Some(u),
-      CustomEvent{..}                => None,
+      CustomEffect(_, _)             => None,
     }
   }
 }
@@ -32,24 +34,38 @@ impl Effect {
 pub type ScopeName = String;
 pub type NumericalIds = HashMap<ScopeName, BTreeMap<u64, Uuid>>;
 
+type CustomData = HashMap<String, String>;
+type CustomHandler = Box<Fn(&Model, &mut CustomData, String) + Sync + 'static>;
+
 pub struct Model {
   // TODO: hide `tasks` and add `archived_tasks`
   pub tasks: HashMap<Uuid, Task>,
   pub applied_effects: Vec<Effect>,
   pub numerical_ids: NumericalIds,
+  pub custom_handlers: HashMap<&'static str, CustomHandler>,
+  pub custom_data: HashMap<String, String>,
 
   is_dirty: bool,
 }
 
-impl Model {
-  pub fn new() -> Self {
+impl Default for Model {
+  fn default() -> Self {
     Model {
       tasks: HashMap::new(),
       applied_effects: Vec::new(),
       numerical_ids: NumericalIds::new(),
 
+      custom_handlers: HashMap::new(),
+      custom_data: HashMap::new(),
+
       is_dirty: false,
     }
+  }
+}
+
+impl Model {
+  pub fn new() -> Self {
+    Model::default()
   }
 
   pub fn from_effects(effects: Vec<Effect>) -> Self {
@@ -59,7 +75,7 @@ impl Model {
     model
   }
 
-  pub fn apply_effect(&mut self, effect: Effect) -> () {
+  pub fn apply_effect(&mut self, effect: Effect) {
     use Effect::*;
     match effect.clone() {
       AddTask(task)                          => { self.add_task(task); },
@@ -67,7 +83,7 @@ impl Model {
       ChangeTaskState(uuid, state)           => { self.change_task_state(&uuid, state); },
       ChangeTaskPriority(uuid, p)            => { self.change_task_priority(&uuid, p); },
       DeleteTask(uuid)                       => { self.delete_task(&uuid); },
-      CustomEvent { tag, data }              => { self.handle_custom_event(tag, data); },
+      CustomEffect(tag, data)                => { self.handle_custom_effect(tag, data); },
     }
 
     self.applied_effects.push(effect);
@@ -105,8 +121,12 @@ impl Model {
     for t in added   { tags.insert(t);  };
   }
 
-  fn handle_custom_event(&mut self, tag: String, data: String) {
-    unimplemented!()
+  fn handle_custom_effect(&mut self, tag: String, data: String) {
+    let handler = self.custom_handlers.get(&tag[..])
+      .expect(&format!("No handler for custom tag: {}", tag));
+    let mut custom_data = self.custom_data.clone();
+    handler(&self, &mut custom_data, data);
+    self.custom_data = custom_data;
   }
 }
 
@@ -297,7 +317,7 @@ mod tests {
     let t = Task::new("foo");
     let uuid = t.uuid.clone();
     m.add_task(t.clone());
-    assert_eq!(m.incremental_numerical_id("defaut", &uuid), 1);
+    assert_eq!(m.incremental_numerical_id("default", &uuid), 1);
   }
 
   #[test]
@@ -327,5 +347,20 @@ mod tests {
     assert_eq!(m.short_task_id("default", &t.uuid), Some(1));
     assert_eq!(m.incremental_numerical_id("default", &t2.uuid), 2);
     assert_eq!(m.short_task_id("default", &t2.uuid), Some(2));
+  }
+
+  #[test]
+  fn test_custom_handlers_called() {
+    use super::CustomData;
+    let mut m = Model::new();
+
+    fn handler(_model: &Model, store: &mut CustomData, data: String) {
+      store.insert("test".into(), data);
+    };
+
+    m.custom_handlers.insert("test", Box::new(handler));
+    m.apply_effect(Effect::CustomEffect("test".into(), "foo".into()));
+
+    assert_eq!(m.custom_data.get("test".into()), Some(&"foo".into()));
   }
 }

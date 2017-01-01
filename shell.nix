@@ -9,7 +9,7 @@ in rec {
     buildInputs = with pkgs; [ rustc cargo pkgconfig sqlite gdb ];
 
     RUST_LOG="rtask=info";
-    RUST_BACKTRACE=1;
+    RUST_BACKTRACE=0;
 
     RTASK_DIRECTORY = "./store/";
     RUST_SRC_PATH="${pkgs.rustc.src}";
