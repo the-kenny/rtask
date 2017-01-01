@@ -10,7 +10,7 @@ pub enum Effect {
   ChangeTaskState(Uuid, TaskState),
   ChangeTaskPriority(Uuid, Priority),
   DeleteTask(Uuid),
-  // Undo,
+  CustomEvent { tag: String, data: String },
 }
 
 impl Effect {
@@ -24,6 +24,7 @@ impl Effect {
       ChangeTaskState(ref u, _)      => Some(u),
       ChangeTaskPriority(ref u, _)   => Some(u),
       DeleteTask(ref u)              => Some(u),
+      CustomEvent{..}                => None,
     }
   }
 }
@@ -66,6 +67,7 @@ impl Model {
       ChangeTaskState(uuid, state)           => { self.change_task_state(&uuid, state); },
       ChangeTaskPriority(uuid, p)            => { self.change_task_priority(&uuid, p); },
       DeleteTask(uuid)                       => { self.delete_task(&uuid); },
+      CustomEvent { tag, data }              => { self.handle_custom_event(tag, data); },
     }
 
     self.applied_effects.push(effect);
@@ -101,6 +103,10 @@ impl Model {
 
     for t in removed { tags.remove(&t); };
     for t in added   { tags.insert(t);  };
+  }
+
+  fn handle_custom_event(&mut self, tag: String, data: String) {
+    unimplemented!()
   }
 }
 
