@@ -12,7 +12,7 @@ pub enum Effect {
   ChangeTaskState(Uuid, TaskState),
   ChangeTaskPriority(Uuid, Priority),
   DeleteTask(Uuid),
-  CustomEffect(CustomTag, String),
+  CustomData(String, String),
 }
 
 impl Effect {
@@ -26,7 +26,7 @@ impl Effect {
       ChangeTaskState(ref u, _)      => Some(u),
       ChangeTaskPriority(ref u, _)   => Some(u),
       DeleteTask(ref u)              => Some(u),
-      CustomEffect(_, _)             => None,
+      CustomData(_, _)               => None,
     }
   }
 }
@@ -34,15 +34,11 @@ impl Effect {
 pub type ScopeName = String;
 pub type NumericalIds = HashMap<ScopeName, BTreeMap<u64, Uuid>>;
 
-type CustomData = HashMap<String, String>;
-type CustomHandler = Box<Fn(&Model, &mut CustomData, String) + Sync + 'static>;
-
 pub struct Model {
   // TODO: hide `tasks` and add `archived_tasks`
   pub tasks: HashMap<Uuid, Task>,
   pub applied_effects: Vec<Effect>,
   pub numerical_ids: NumericalIds,
-  pub custom_handlers: HashMap<&'static str, CustomHandler>,
   pub custom_data: HashMap<String, String>,
 
   is_dirty: bool,
@@ -54,8 +50,6 @@ impl Default for Model {
       tasks: HashMap::new(),
       applied_effects: Vec::new(),
       numerical_ids: NumericalIds::new(),
-
-      custom_handlers: HashMap::new(),
       custom_data: HashMap::new(),
 
       is_dirty: false,
@@ -83,7 +77,7 @@ impl Model {
       ChangeTaskState(uuid, state)           => { self.change_task_state(&uuid, state); },
       ChangeTaskPriority(uuid, p)            => { self.change_task_priority(&uuid, p); },
       DeleteTask(uuid)                       => { self.delete_task(&uuid); },
-      CustomEffect(tag, data)                => { self.handle_custom_effect(tag, data); },
+      CustomData(key, value)                 => { self.set_custom_data(key, value); },
     }
 
     self.applied_effects.push(effect);
@@ -121,12 +115,10 @@ impl Model {
     for t in added   { tags.insert(t);  };
   }
 
-  fn handle_custom_effect(&mut self, tag: String, data: String) {
-    let handler = self.custom_handlers.get(&tag[..])
-      .expect(&format!("No handler for custom tag: {}", tag));
-    let mut custom_data = self.custom_data.clone();
-    handler(&self, &mut custom_data, data);
-    self.custom_data = custom_data;
+  fn set_custom_data(&mut self, key: String, value: String) {
+    if self.custom_data.insert(key.clone(), value).is_some() {
+      info!("Custom data key {} already exists. Replacing...", key);
+    }
   }
 }
 
@@ -350,17 +342,9 @@ mod tests {
   }
 
   #[test]
-  fn test_custom_handlers_called() {
-    use super::CustomData;
+  fn test_custom_data() {
     let mut m = Model::new();
-
-    fn handler(_model: &Model, store: &mut CustomData, data: String) {
-      store.insert("test".into(), data);
-    };
-
-    m.custom_handlers.insert("test", Box::new(handler));
-    m.apply_effect(Effect::CustomEffect("test".into(), "foo".into()));
-
+    m.apply_effect(Effect::CustomData("test".into(), "foo".into()));
     assert_eq!(m.custom_data.get("test".into()), Some(&"foo".into()));
   }
 }
