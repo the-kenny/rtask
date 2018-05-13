@@ -33,9 +33,9 @@ impl Default for Priority {
   fn default() -> Self { Priority::Default }
 }
 
-impl Into<f32> for Priority {
-  fn into(self) -> f32 {
-    match self {
+impl From<Priority> for f32 {
+  fn from(o: Priority) -> Self {
+    match o {
       Priority::Low     => -5.0,
       Priority::Default =>  0.0,
       Priority::High    =>  5.0,
@@ -103,7 +103,7 @@ impl Task {
 
     let mut urgency = 0.0;
     urgency += days / 100.0; // Add 0.01 for every day since creation
-    urgency += self.priority.into(); // Add priority
+    urgency += f32::from(self.priority); // Add priority
     urgency += self.tags.len() as f32 / 1000.0;
 
     urgency
