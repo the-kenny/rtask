@@ -129,7 +129,7 @@ impl Model {
 
     self.short_task_id(scope, task).unwrap_or_else(|| {
       self.is_dirty = true;
-      let mut numerical_ids = self.numerical_ids.entry(scope.into())
+      let numerical_ids = self.numerical_ids.entry(scope.into())
         .or_insert(BTreeMap::new());
 
       let n = numerical_ids.iter()

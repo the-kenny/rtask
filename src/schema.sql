@@ -11,7 +11,7 @@ create trigger no_delete_trigger
     select raise(rollback, "delete not allowed");
   end;
 
-create trigger no_upate_trigger
+create trigger no_update_trigger
   before update on effects
   begin
     select raise(rollback, "update not allowed");
