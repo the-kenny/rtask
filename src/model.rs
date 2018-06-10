@@ -254,7 +254,7 @@ mod tests {
     let uuid = t.uuid.clone();
     m.add_task(t.clone());
     assert_eq!(m.tasks[&uuid].status, TaskState::Open);
-    let s = TaskState::Done(time::get_time());
+    let s = TaskState::done();
     m.change_task_state(&uuid, s);
     assert_eq!(m.tasks[&uuid].status, s);
   }

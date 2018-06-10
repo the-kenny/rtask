@@ -3,6 +3,9 @@ name = "rtask"
 version = "0.1.0"
 authors = ["Moritz Ulrich <moritz@tarn-vedra.de>"]
 
+[features]
+todoist = ["hyper"]
+
 [dependencies]
 ansi_term = "0.8"
 env_logger = "0.3"

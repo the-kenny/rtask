@@ -21,6 +21,16 @@ pub enum TaskState {
   Canceled(Time),
 }
 
+impl TaskState {
+  pub fn done() -> Self {
+    TaskState::Done(time::get_time())
+  }
+
+  pub fn canceled() -> Self {
+    TaskState::Canceled(time::get_time())
+  }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash,
          RustcEncodable, RustcDecodable)]
 pub enum Priority {
@@ -76,11 +86,11 @@ pub struct Task {
   pub extras:      ExtraMap,
 }
 
-impl Task {
-  pub fn new(description: &str) -> Self {
+impl Default for Task {
+  fn default() -> Self {
     let now = time::get_time();
     Task {
-      description: description.to_string(),
+      description: "".to_string(),
       status: TaskState::Open,
       priority: Priority::default(),
       created: now,
@@ -88,6 +98,15 @@ impl Task {
       uuid: Uuid::new_v4(),
       tags: Tags::new(),
       extras: ExtraMap::new(),
+    }
+  }
+}
+
+impl Task {
+  pub fn new(description: &str) -> Self {
+    Task {
+      description: description.into(),
+      ..Default::default()
     }
   }
 

@@ -37,12 +37,21 @@ impl Scope {
 
 #[derive(Debug)]
 enum HandleCommandError {
-  FindTaskError(FindTaskError)
+  FindTaskError(FindTaskError),
+  #[cfg(feature="todoist")]
+  Todoist(todoist::Error),
 }
 
 impl From<FindTaskError> for HandleCommandError {
   fn from(other: FindTaskError) -> Self {
     HandleCommandError::FindTaskError(other)
+  }
+}
+
+#[cfg(feature="todoist")]
+impl From<todoist::Error> for HandleCommandError {
+  fn from(other: todoist::Error) -> Self {
+    HandleCommandError::Todoist(other)
   }
 }
 
@@ -183,7 +192,7 @@ fn command_to_effects(model: &mut Model,
     },
     Command::MarkDone(r) => {
       let task = try!(model.find_task(&scope, &r));
-      Ok(vec![Effect::ChangeTaskState(task.uuid.clone(), TaskState::Done(time::get_time()))])
+      Ok(vec![Effect::ChangeTaskState(task.uuid.clone(), TaskState::done())])
     },
     Command::MarkCanceled(r) => {
       let task = try!(model.find_task(&scope, &r));
@@ -207,6 +216,15 @@ fn command_to_effects(model: &mut Model,
 
       Ok(effects)
     },
+    #[cfg(feature="todoist")]
+    Command::Todoist(todoist_cmd) => {
+      println!("Todoist: {:?}", todoist_cmd);
+      let effects = todoist::command_to_effect(&model, todoist_cmd)?;
+      println!("todoist effects: {:?}", effects);
+      // Ok(effects)
+      error!("Ignoring todoist effects");
+      Ok(vec![])
+    }
   }
 }
 
@@ -234,6 +252,10 @@ fn main() {
         },
         Err(HandleCommandError::FindTaskError(FindTaskError::TaskNotFound)) => {
           println!("No matching task found");
+        },
+        #[cfg(feature="todoist")]
+        Err(HandleCommandError::Todoist(terr)) => {
+          println!("Error from Todoist: {:?}", terr);
         },
         Ok(effects) => {
           for effect in effects {

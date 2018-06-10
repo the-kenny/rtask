@@ -1,6 +1,9 @@
 use ::task::*;
 use ::{TaskRef, TaskRefError};
 
+#[cfg(feature="todoist")]
+use ::todoist;
+
 use std::{env, fmt};
 use std::str::FromStr;
 use std::fmt::Debug;
@@ -97,6 +100,9 @@ pub enum Command {
     removed_tags: Tags,
     priority:     Option<Priority>,
   },
+
+  #[cfg(feature = "todoist")]
+  Todoist(todoist::Command),
 }
 
 impl Command {
@@ -153,6 +159,10 @@ impl Command {
     } else {
       let arg0 = args.get(0).map(|s| s.as_ref());
       match arg0 {
+        #[cfg(feature="todoist")]
+        Some("todoist") => {
+          Ok(Command::Todoist(todoist::Command::FetchData))
+        }
         Some("add") => {
           // TODO: Get rid of all this pesky cloning
           let params = args.iter().skip(1);

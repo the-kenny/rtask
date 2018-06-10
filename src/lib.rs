@@ -8,6 +8,11 @@ extern crate time;
 extern crate uuid;
 #[macro_use] extern crate log;
 #[macro_use] extern crate lazy_static;
+#[macro_use] extern crate quick_error;
+
+// Todoist Integration
+#[cfg(feature = "todoist")] extern crate hyper;
+#[cfg(feature = "todoist")] pub mod todoist;
 
 pub mod commands;
 pub mod file_lock;
