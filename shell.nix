@@ -5,7 +5,7 @@ in rec {
   rustEnv = pkgs.stdenv.mkDerivation {
     name = "rust";
     version = "1.2.3.4";
-    src = ./.;
+    src = null;
     buildInputs = with pkgs; [ rustup pkgconfig sqlite openssl gdb ];
 
     RUST_LOG="rtask=info";
@@ -14,7 +14,6 @@ in rec {
     RTASK_DIRECTORY = "./store/";
 
     shellHook = ''
-      export PATH="target/debug/:$PATH";
     '';
   };
 } 

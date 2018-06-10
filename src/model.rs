@@ -2,8 +2,7 @@ use ::task::*;
 use ::task_ref::TaskRef;
 use std::collections::{BTreeMap, HashMap};
 
-#[derive(Clone, Debug, PartialEq, Eq,
-         RustcEncodable, RustcDecodable)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Effect {
   AddTask(Task),
   ChangeTaskTags { uuid: Uuid, added: Tags, removed: Tags },

@@ -1,9 +1,10 @@
 use std::path::Path;
 use std::collections::BTreeMap;
 
+use serde_json;
+
 use rusqlite;
 use rusqlite::Connection;
-use rustc_serialize::json;
 
 use ::{ Model, Effect, Uuid };
 use ::StorageEngine;
@@ -44,7 +45,7 @@ impl SqliteStorage {
 
     let effects: Result<Vec<Effect>, _> = try!(stmt.query_map(&[], |row| row.get(1))).map(|row| {
       let data: String = try!(row);
-      Ok(json::decode(&data).unwrap())
+      Ok(serde_json::from_str(&data).unwrap())
     }).collect();
 
     debug!("effects: #{:?}", effects);
@@ -59,7 +60,7 @@ impl SqliteStorage {
       let scope: String = row.get(0);
       let n: i64 = row.get(1);
       let uuid: String = row.get(2);
-      let uuid: Uuid = json::decode(&uuid).unwrap();
+      let uuid: Uuid = serde_json::from_str(&uuid).unwrap();
       (scope, n as u64, uuid)
     }))
       .map(Result::unwrap)
@@ -136,7 +137,7 @@ impl Drop for SqliteStorage {
 
     for (n, effect) in self.model.applied_effects.iter().enumerate() {
       if n >= row_count as usize {
-        let json = json::encode(&effect).unwrap();
+        let json = serde_json::to_string(&effect).unwrap();
         debug!("Inserting JSON: {:?}", json);
         tx.execute("insert into effects (json) values ($1)", &[&json])
           .unwrap();
@@ -152,7 +153,7 @@ impl Drop for SqliteStorage {
     for (scope, ids) in self.model.numerical_ids.iter() {
       for (n, uuid) in ids {
         let n = *n as i64;
-        let uuid = json::encode(&uuid).unwrap();
+        let uuid = serde_json::to_string(&uuid).unwrap();
         tx.execute("insert into numerical_ids (scope, id, uuid) values ($1, $2, $3)", &[scope, &n, &uuid])
           .expect("Failed to insert numerical id");
       }

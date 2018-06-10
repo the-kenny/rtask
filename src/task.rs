@@ -1,19 +1,18 @@
-use time;
+use std::collections::{HashMap, HashSet};
+use chrono;
 use uuid;
 
-use std::collections::{HashMap, HashSet};
-
 pub type Title    = String;
-pub type Time     = time::Timespec;
+pub type Time     = chrono::DateTime<chrono::Utc>;
 pub type Uuid     = uuid::Uuid;
 pub type Tag      = String;
 pub type Tags     = HashSet<Tag>;
 pub type ExtraMap = HashMap<ExtraData, String>;
 
-pub struct Age(time::Duration);
+pub struct Age(chrono::Duration);
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq,
-         RustcEncodable, RustcDecodable)]
+         Serialize, Deserialize)]
 pub enum TaskState {
   Open,
   Done(Time),
@@ -21,7 +20,7 @@ pub enum TaskState {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash,
-         RustcEncodable, RustcDecodable)]
+         Serialize, Deserialize)]
 pub enum Priority {
   Low,
   Default,
@@ -58,12 +57,12 @@ impl FromStr for Priority {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash,
-         RustcEncodable, RustcDecodable)]
+         Serialize, Deserialize)]
 pub enum ExtraData {
   Notes = 1,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, RustcEncodable)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Task {
   pub description: Title,
   pub status:      TaskState,
@@ -77,7 +76,7 @@ pub struct Task {
 
 impl Task {
   pub fn new(description: &str) -> Self {
-    let now = time::get_time();
+    let now = chrono::Utc::now();
     Task {
       description: description.to_string(),
       status: TaskState::Open,
@@ -97,8 +96,8 @@ impl Task {
   }
 
   pub fn urgency(&self) -> f32 {
-    let diff = time::get_time() - self.created;
-    let seconds_per_day = time::Duration::days(1).num_seconds();
+    let diff = chrono::Utc::now() - self.created;
+    let seconds_per_day = chrono::Duration::days(1).num_seconds();
     let days = diff.num_seconds() as f32 / seconds_per_day as f32;
 
     let mut urgency = 0.0;
@@ -110,7 +109,7 @@ impl Task {
   }
 
   pub fn age(&self) -> Age {
-    Age(time::get_time() - self.created)
+    Age(chrono::Utc::now() - self.created)
   }
 
   pub fn short_id(&self) -> String {
@@ -128,8 +127,8 @@ impl Task {
   }
 }
 
-use rustc_serialize::{Decoder,Decodable};
-impl Decodable for Task {
+/*
+impl serde::Deserialize for Task {
   fn decode<D: Decoder>(d: &mut D) -> Result<Self, D::Error> {
     let description = try!(d.read_struct_field("description", 0, Decodable::decode));
     let status      = try!(d.read_struct_field("status",      0, Decodable::decode));
@@ -153,6 +152,7 @@ impl Decodable for Task {
     })
   }
 }
+*/
 
 use std::cmp;
 impl cmp::PartialOrd for Task {

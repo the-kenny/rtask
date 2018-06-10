@@ -34,17 +34,20 @@ impl Flag {
 
     // TODO: Write a loop
     let priority = PRIORITY_RE.captures(s)
-      .and_then(|cs| cs.at(1))
+      .and_then(|cs| cs.get(1))
+      .map(|m| m.as_str())
       .and_then(|s| Priority::from_str(s).ok())
       .map(Flag::Priority);
 
     let pos_tag = TAG_POS_RE.captures(s)
-      .and_then(|cs| cs.at(1))
+      .and_then(|cs| cs.get(1))
+      .map(|m| m.as_str())
       .map(String::from)
       .map(Flag::TagPositive);
 
     let neg_tag = TAG_NEG_RE.captures(s)
-      .and_then(|cs| cs.at(1))
+      .and_then(|cs| cs.get(1))
+      .map(|m| m.as_str())
       .map(String::from)
       .map(Flag::TagNegative);
 

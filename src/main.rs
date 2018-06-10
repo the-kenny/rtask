@@ -1,8 +1,7 @@
 extern crate rtask;
+extern crate chrono;
 #[macro_use] extern crate log;
 extern crate env_logger;
-extern crate time;
-
 use rtask::*;
 use rtask::terminal_size::*;
 
@@ -183,11 +182,11 @@ fn command_to_effects(model: &mut Model,
     },
     Command::MarkDone(r) => {
       let task = try!(model.find_task(&scope, &r));
-      Ok(vec![Effect::ChangeTaskState(task.uuid.clone(), TaskState::Done(time::get_time()))])
+      Ok(vec![Effect::ChangeTaskState(task.uuid.clone(), TaskState::Done(chrono::Utc::now()))])
     },
     Command::MarkCanceled(r) => {
       let task = try!(model.find_task(&scope, &r));
-      Ok(vec![Effect::ChangeTaskState(task.uuid.clone(), TaskState::Canceled(time::get_time()))])
+      Ok(vec![Effect::ChangeTaskState(task.uuid.clone(), TaskState::Canceled(chrono::Utc::now()))])
     },
     Command::ChangeTaskProperties { task_ref, added_tags, removed_tags, priority } => {
       let task = try!(model.find_task(&scope, &task_ref));
@@ -211,7 +210,7 @@ fn command_to_effects(model: &mut Model,
 }
 
 fn main() {
-  env_logger::init().unwrap();
+  env_logger::init();
   chdir();
 
   let mut lock = FileLock::new(PID_FILE).expect("Failed to acquire lock");

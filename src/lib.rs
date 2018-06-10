@@ -1,11 +1,13 @@
 extern crate ansi_term;
-extern crate bincode;
 extern crate libc;
 extern crate regex;
 extern crate rusqlite;
-extern crate rustc_serialize;
-extern crate time;
+extern crate serde;
+#[macro_use] extern crate serde_derive;
+extern crate serde_json;
+extern crate chrono;
 extern crate uuid;
+
 #[macro_use] extern crate log;
 #[macro_use] extern crate lazy_static;
 
