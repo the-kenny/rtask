@@ -214,7 +214,7 @@ impl Model {
 mod tests {
   use super::*;
   use ::{Task, TaskRef, TaskState, Priority};
-  use time;
+  use chrono;
   use uuid::Uuid;
   use std::str::FromStr;
 
@@ -235,7 +235,7 @@ mod tests {
     let uuid = t.uuid.clone();
     m.add_task(t.clone());
     assert_eq!(m.tasks[&uuid].status, TaskState::Open);
-    let s = TaskState::Done(time::get_time());
+    let s = TaskState::Done(chrono::Utc::now());
     m.change_task_state(&uuid, s);
     assert_eq!(m.tasks[&uuid].status, s);
   }

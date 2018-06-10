@@ -200,7 +200,6 @@ impl Command {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use ::task::*;
 
   #[test]
   fn test_list() {

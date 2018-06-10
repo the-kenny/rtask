@@ -296,7 +296,7 @@ mod tests {
 
   #[test]
   fn test_urgency() {
-    use time::Duration;
+    use chrono::Duration;
 
     let t = Task::new("old");
     let mut t2 = t.clone();
