@@ -131,7 +131,7 @@ fn command_to_effects(model: &mut Model,
       Ok(vec![])
     },
     Command::Show(r) => {
-      let task = try!(model.find_task(&scope, &r));
+      let task = model.find_task(&scope, &r)?;
       match scope.as_tag() {
         Some(ref t) if !task.tags.contains(t) => {
           println!("Note: Task {} isn't in scope {}", r, scope);
@@ -140,21 +140,23 @@ fn command_to_effects(model: &mut Model,
       }
 
       macro_rules! p {
-        ( $( $p:ident ),* ) => {
+        ( $( ($k:ident, $v:expr), )* ) => {
           $(
-            println!("{:<15} {:?}", stringify!($p), task.$p);
+            println!("{:<15} {}", stringify!($k), $v);
           )*
         }
       }
 
+      let tag_list = task.tags.iter().map(|s| &s[..]).collect::<Vec<_>>().join(", ");
+
       p!(
-        uuid,
-        description,
-        priority,
-        created,
-        modified,
-        tags,
-        extras
+        (uuid,        task.uuid),
+        (description, task.description),
+        (priority,    task.priority),
+        (created,     task.created),
+        (modified,    task.modified),
+        (tags,        tag_list),
+        (extras,      format!("{:?}", task.extras)),
       );
 
       Ok(vec![])
@@ -177,19 +179,19 @@ fn command_to_effects(model: &mut Model,
       Ok(vec![Effect::AddTask(task)])
     },
     Command::Delete(r) => {
-      let task = try!(model.find_task(&scope, &r));
+      let task = model.find_task(&scope, &r)?;
       Ok(vec![Effect::DeleteTask(task.uuid.clone())])
     },
     Command::MarkDone(r) => {
-      let task = try!(model.find_task(&scope, &r));
+      let task = model.find_task(&scope, &r)?;
       Ok(vec![Effect::ChangeTaskState(task.uuid.clone(), TaskState::Done(chrono::Utc::now()))])
     },
     Command::MarkCanceled(r) => {
-      let task = try!(model.find_task(&scope, &r));
+      let task = model.find_task(&scope, &r)?;
       Ok(vec![Effect::ChangeTaskState(task.uuid.clone(), TaskState::Canceled(chrono::Utc::now()))])
     },
     Command::ChangeTaskProperties { task_ref, added_tags, removed_tags, priority } => {
-      let task = try!(model.find_task(&scope, &task_ref));
+      let task = model.find_task(&scope, &task_ref)?;
 
       let mut effects = vec![];
       if let Some(p) = priority {
