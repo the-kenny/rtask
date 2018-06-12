@@ -30,6 +30,7 @@ impl SqliteStorage {
 
     info!("Initializing SQL Storage");
 
+    // TODO: There's a new function rusqlite for this
     let schema = include_str!("schema.sql");
     let commands = schema.split("\n\n").map(str::trim).filter(|s| !s.is_empty());
 
