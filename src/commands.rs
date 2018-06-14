@@ -6,7 +6,8 @@ use std::str::FromStr;
 use std::fmt::Debug;
 use regex::Regex;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Fail)]
+#[fail(display = "{}", _0)]
 pub struct ParseError(pub String);
 
 impl From<TaskRefError> for ParseError {

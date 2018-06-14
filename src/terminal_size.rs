@@ -33,9 +33,11 @@ struct Winsize {
 #[cfg(unix)]
 const TIOCGWINSZ: u64 = 0x5413;
 
-#[derive(Debug)]
+#[derive(Debug, Fail)]
 enum TerminalSizeError {
+  #[fail(display = "IO Error: {}", _0)]
   Io(io::Error),
+  #[fail(display = "Terminal size returned zero value for width or height")]
   ZeroSize,
 }
 

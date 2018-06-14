@@ -8,8 +8,9 @@ pub enum TaskRef {
   Numerical(u64),
 }
 
-#[derive(Debug, PartialEq, Eq)]
-pub struct TaskRefError;
+#[derive(Debug, PartialEq, Eq, Fail)]
+#[fail(display = "Unknown task reference {:?}", _0)]
+pub struct TaskRefError(String);
 
 use std::fmt;
 use std::str::FromStr;
@@ -29,7 +30,7 @@ impl FromStr for TaskRef {
       None
     };
 
-    uuid.or(short).or(numerical).map_or(Err(TaskRefError), Ok)
+    uuid.or(short).or(numerical).map_or(Err(TaskRefError(s.to_string())), Ok)
   }
 }
 

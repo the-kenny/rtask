@@ -22,9 +22,11 @@ pub struct PrintRow {
   pub style: Option<Style>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Fail)]
 pub enum PrintError {
+  #[fail(display = "IO Error: {}", _0)]
   IO(io::Error),
+  #[fail(display = "Terminal not wide enough for output")]
   TerminalTooNarrow
 }
 

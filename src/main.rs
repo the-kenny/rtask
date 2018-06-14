@@ -1,7 +1,9 @@
 extern crate rtask;
 extern crate chrono;
 #[macro_use] extern crate log;
+#[macro_use] extern crate failure;
 extern crate env_logger;
+
 use rtask::*;
 use rtask::terminal_size::*;
 
@@ -34,8 +36,10 @@ impl Scope {
   }
 }
 
-#[derive(Debug)]
+// TODO: Use a better error enum
+#[derive(Debug, Fail)]
 enum HandleCommandError {
+  #[fail(display = "Failed to find task: {}", _0)]
   FindTaskError(FindTaskError)
 }
 

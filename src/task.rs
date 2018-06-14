@@ -127,33 +127,6 @@ impl Task {
   }
 }
 
-/*
-impl serde::Deserialize for Task {
-  fn decode<D: Decoder>(d: &mut D) -> Result<Self, D::Error> {
-    let description = try!(d.read_struct_field("description", 0, Decodable::decode));
-    let status      = try!(d.read_struct_field("status",      0, Decodable::decode));
-    // Hack to allow missing fields (for backwards compatibility)
-    let priority: Option<Priority> = try!(d.read_struct_field("priority",    0, Decodable::decode));
-    let created     = try!(d.read_struct_field("created",     0, Decodable::decode));
-    let modified    = try!(d.read_struct_field("modified",    0, Decodable::decode));
-    let uuid        = try!(d.read_struct_field("uuid",        0, Decodable::decode));
-    let tags        = try!(d.read_struct_field("tags",        0, Decodable::decode));
-    let extras      = try!(d.read_struct_field("extras",      0, Decodable::decode));
-
-    Ok(Task {
-      description: description,
-      status: status,
-      priority: priority.unwrap_or(Priority::default()),
-      created: created,
-      modified: modified,
-      uuid: uuid,
-      tags: tags,
-      extras: extras,
-    })
-  }
-}
-*/
-
 use std::cmp;
 impl cmp::PartialOrd for Task {
   fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {

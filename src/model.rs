@@ -143,9 +143,11 @@ impl Model {
   }
 }
 
-#[derive(Debug,PartialEq,Eq)]
+#[derive(Debug, PartialEq, Eq, Fail)]
 pub enum FindTaskError {
+  #[fail(display = "Couldn't find task")]
   TaskNotFound,
+  #[fail(display = "Found multiple tasks")]
   MultipleResults
 }
 
