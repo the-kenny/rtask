@@ -1,5 +1,5 @@
-use ::task::*;
-use ::{TaskRef, TaskRefError};
+use task::*;
+use task_ref::{TaskRef, TaskRefError};
 
 use std::{env, fmt};
 use std::str::FromStr;

@@ -6,6 +6,7 @@ extern crate env_logger;
 
 use rtask::*;
 use rtask::terminal_size::*;
+use rtask::commands::Command;
 
 use std::{env, fmt, fs, mem};
 use std::io::ErrorKind;

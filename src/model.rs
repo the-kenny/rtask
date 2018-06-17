@@ -1,5 +1,5 @@
-use ::task::*;
-use ::task_ref::TaskRef;
+use task::*;
+use task_ref::TaskRef;
 use std::collections::{BTreeMap, HashMap};
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -35,7 +35,7 @@ pub struct Model {
   pub tasks: HashMap<Uuid, Task>,
   pub applied_effects: Vec<Effect>,
   pub numerical_ids: NumericalIds,
-
+  
   is_dirty: bool,
 }
 

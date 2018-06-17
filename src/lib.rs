@@ -20,15 +20,13 @@ pub mod task;
 pub mod task_ref;
 pub mod terminal_size;
 
-pub use commands::*;
 pub use task::*;
 pub use model::*;
-pub use task_ref::*;
 pub use file_lock::FileLock;
 
 pub trait StorageEngine: Sized + Drop {
   type LoadErr;
-  // fn load_from<P: AsRef<Path>>(dir: P) -> Result<Self, Self::LoadErr>;
+
   fn new() -> Result<Self, Self::LoadErr>;
   fn model<'a>(&'a mut self) -> &'a mut Model;
 }
