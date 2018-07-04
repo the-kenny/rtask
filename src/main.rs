@@ -50,6 +50,7 @@ impl From<FindTaskError> for HandleCommandError {
   }
 }
 
+// TODO: move to rtask crate
 fn command_to_effects(model: &mut Model,
                       command: Command)
                       -> Result<Vec<Effect>, HandleCommandError> {
@@ -135,34 +136,46 @@ fn command_to_effects(model: &mut Model,
 
       Ok(vec![])
     },
-    Command::Show(r) => {
-      let task = model.find_task(&scope, &r)?;
-      match scope.as_tag() {
-        Some(ref t) if !task.tags.contains(t) => {
-          println!("Note: Task {} isn't in scope {}", r, scope);
+    Command::Show(refs) => {
+      for task_ref in refs {
+        let task = model.find_task(&scope, &task_ref);
+
+        if task.is_err() {
+          println!("Couldn't find task {}", task_ref);
+          continue;
         }
-        _ => ()
-      }
 
-      macro_rules! p {
-        ( $( ($k:ident, $v:expr), )* ) => {
-          $(
-            println!("{:<15} {}", stringify!($k), $v);
-          )*
+        let task = task.unwrap();
+
+        match scope.as_tag() {
+          Some(ref t) if !task.tags.contains(t) => {
+            println!("Note: Task {} isn't in scope {}", task_ref, scope);
+          }
+          _ => ()
         }
+
+        macro_rules! p {
+          ( $( ($k:ident, $v:expr), )* ) => {
+            $(
+              println!("{:<15} {}", stringify!($k), $v);
+            )*
+          }
+        }
+
+        let tag_list = task.tags.iter().map(|s| &s[..]).collect::<Vec<_>>().join(", ");
+
+        println!("==== task {} ====", task_ref);
+
+        p!(
+          (uuid,        task.uuid),
+          (description, task.description),
+          (priority,    task.priority),
+          (created,     task.created),
+          (modified,    task.modified),
+          (tags,        tag_list),
+          (extras,      format!("{:?}", task.extras)),
+        );
       }
-
-      let tag_list = task.tags.iter().map(|s| &s[..]).collect::<Vec<_>>().join(", ");
-
-      p!(
-        (uuid,        task.uuid),
-        (description, task.description),
-        (priority,    task.priority),
-        (created,     task.created),
-        (modified,    task.modified),
-        (tags,        tag_list),
-        (extras,      format!("{:?}", task.extras)),
-      );
 
       Ok(vec![])
     },
@@ -183,32 +196,49 @@ fn command_to_effects(model: &mut Model,
 
       Ok(vec![Effect::AddTask(task)])
     },
-    Command::Delete(r) => {
-      let task = model.find_task(&scope, &r)?;
-      Ok(vec![Effect::DeleteTask(task.uuid.clone())])
+    Command::Delete(refs) => {
+      let effects = refs.iter()
+        .flat_map(|tr| model.find_task(&scope, tr))
+        .map(|t| Effect::DeleteTask(t.uuid.clone()))
+        .collect();
+      
+      Ok(effects)
     },
-    Command::MarkDone(r) => {
-      let task = model.find_task(&scope, &r)?;
-      Ok(vec![Effect::ChangeTaskState(task.uuid.clone(), TaskState::Done(chrono::Utc::now()))])
+    Command::MarkDone(refs) => {
+      let state = TaskState::Done(chrono::Utc::now());
+      let effects = refs.iter()
+        .flat_map(|tr| model.find_task(&scope, tr))
+        .map(|t| Effect::ChangeTaskState(t.uuid.clone(), state.clone()))
+        .collect();
+      
+      Ok(effects)
     },
-    Command::MarkCanceled(r) => {
-      let task = model.find_task(&scope, &r)?;
-      Ok(vec![Effect::ChangeTaskState(task.uuid.clone(), TaskState::Canceled(chrono::Utc::now()))])
+    Command::MarkCanceled(refs) => { //
+            let state = TaskState::Canceled(chrono::Utc::now());
+      let effects = refs.iter()
+        .flat_map(|tr| model.find_task(&scope, tr))
+        .map(|t| Effect::ChangeTaskState(t.uuid.clone(), state.clone()))
+        .collect();
+      
+      Ok(effects)
     },
-    Command::ChangeTaskProperties { task_ref, added_tags, removed_tags, priority } => {
-      let task = model.find_task(&scope, &task_ref)?;
-
+    Command::ChangeTaskProperties { task_refs, added_tags, removed_tags, priority } => {
       let mut effects = vec![];
-      if let Some(p) = priority {
-        effects.push(Effect::ChangeTaskPriority(task.uuid.clone(), p));
-      }
 
-      if !added_tags.is_empty() || !removed_tags.is_empty() {
-        effects.push(Effect::ChangeTaskTags {
-          uuid: task.uuid.clone(),
-          added: added_tags,
-          removed: removed_tags,
-        });
+      for task_ref in task_refs {
+        let task = model.find_task(&scope, &task_ref)?;
+
+        if let Some(p) = priority {
+          effects.push(Effect::ChangeTaskPriority(task.uuid.clone(), p));
+        }
+
+        if !added_tags.is_empty() || !removed_tags.is_empty() {
+          effects.push(Effect::ChangeTaskTags {
+            uuid: task.uuid.clone(),
+            added: added_tags.clone(),
+            removed: removed_tags.clone(),
+          });
+        }
       }
 
       Ok(effects)
@@ -306,6 +336,7 @@ fn chdir() {
 #[cfg(test)]
 mod tests {
   use super::rtask::*;
+  use super::rtask::commands::*;
 
   #[test]
   fn test_command_to_effect_no_noop_effects() {
@@ -314,7 +345,7 @@ mod tests {
     m.apply_effect(Effect::AddTask(t.clone()));
 
     let c = Command::ChangeTaskProperties {
-      task_ref: t.uuid.into(),
+      refs: vec![t.uuid.into()],
       added_tags: Tags::new(),
       removed_tags: Tags::new(),
       priority: None,

@@ -215,7 +215,7 @@ impl Model {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use ::{Task, TaskRef, TaskState, Priority};
+  use ::{Task, TaskState, Priority};
   use chrono;
   use uuid::Uuid;
   use std::str::FromStr;

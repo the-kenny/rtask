@@ -1,12 +1,14 @@
 use ::task::*;
 use regex::Regex;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub enum TaskRef {
   ShortUUID(String),
   FullUUID(Uuid),
   Numerical(u64),
 }
+
+pub type TaskRefs = Vec<TaskRef>;
 
 #[derive(Debug, PartialEq, Eq, Fail)]
 #[fail(display = "Unknown task reference {:?}", _0)]
@@ -17,6 +19,7 @@ use std::str::FromStr;
 
 impl FromStr for TaskRef {
   type Err = TaskRefError;
+
   fn from_str(s: &str) -> Result<TaskRef, TaskRefError> {
     lazy_static! {
       static ref SHORT_RE: Regex = Regex::new("^[0-9a-fA-F]{6}$").unwrap();
@@ -47,5 +50,15 @@ impl fmt::Display for TaskRef {
       TaskRef::FullUUID(ref u)  => f.write_str(&u.hyphenated().to_string()),
       TaskRef::Numerical(n)     => f.write_str(&n.to_string()),
     }
+  }
+}
+
+#[cfg(test)]
+mod test {
+  use super::*;
+  
+  #[test]
+  fn test_numerical_ref() {
+    assert_eq!(TaskRef::from_str("100"), Ok(TaskRef::Numerical(100)));
   }
 }

@@ -11,6 +11,7 @@ in rec {
     RUST_LOG="rtask=info";
     RUST_BACKTRACE=1;
 
+    RTASK_SCOPE="rtask";
     RTASK_DIRECTORY = "./store/";
 
     shellHook = ''

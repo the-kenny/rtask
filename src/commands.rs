@@ -1,11 +1,12 @@
 use task::*;
-use task_ref::{TaskRef, TaskRefError};
+use task_ref::{TaskRef, TaskRefs, TaskRefError};
 
 use std::{env, fmt};
 use std::str::FromStr;
 use std::fmt::Debug;
 use regex::Regex;
 
+// TODO: Use a proper enum
 #[derive(Debug, PartialEq, Eq, Fail)]
 #[fail(display = "{}", _0)]
 pub struct ParseError(pub String);
@@ -88,15 +89,15 @@ impl fmt::Display for Flag {
 #[derive(PartialEq, Eq, Debug)]
 pub enum Command {
   List(Vec<Flag>),
-  Show(TaskRef),
+  Show(TaskRefs),
   Add(Title, Vec<Flag>),
-  MarkDone(TaskRef),
-  MarkCanceled(TaskRef),
-  Delete(TaskRef),
+  MarkDone(TaskRefs),
+  MarkCanceled(TaskRefs),
+  Delete(TaskRefs),
   // This Command is used to apply multiple state changes coming from
   // a set of CLI flags (`Flag`)
   ChangeTaskProperties {
-    task_ref:     TaskRef,
+    task_refs:    TaskRefs,
     added_tags:   Tags,
     removed_tags: Tags,
     priority:     Option<Priority>,
@@ -110,18 +111,25 @@ impl Command {
   }
 
   fn from_slice<S: Debug + AsRef<str>>(args: &[S]) -> Result<Self, ParseError> {
-    // Try to parse args[0] as TaskRef first
-    if let Some(tr) = args.get(0).and_then(|s| TaskRef::from_str(s.as_ref()).ok()) {
-      let first_arg = args.get(1).clone();
-      match first_arg.map(|s| s.as_ref()) {
-        None => {
-          Ok(Command::Show(tr))
-        },
-        Some("show")     => Ok(Command::Show(tr)),
-        Some("done")     => Ok(Command::MarkDone(tr)),
-        Some("cancel")   => Ok(Command::MarkCanceled(tr)),
-        Some("delete")   => Ok(Command::Delete(tr)),
-        Some(cmd) => {
+    let task_refs = args.iter().take_while(|s| {
+      TaskRef::from_str(s.as_ref()).is_ok()
+    })
+      .map(|s| TaskRef::from_str(s.as_ref()).unwrap())
+      .collect::<Vec<TaskRef>>();
+
+    debug!("Got task_refs: {:?}", task_refs);
+
+    let args = args.into_iter().skip(task_refs.len())
+      .collect::<Vec<_>>();
+
+    if !task_refs.is_empty() {
+      match args.get(0).map(|s| s.as_ref()) {
+        None             => Ok(Command::Show(task_refs)),
+        Some("show")     => Ok(Command::Show(task_refs)),
+        Some("done")     => Ok(Command::MarkDone(task_refs)),
+        Some("cancel")   => Ok(Command::MarkCanceled(task_refs)),
+        Some("delete")   => Ok(Command::Delete(task_refs)),
+        Some("edit") => {
           // Parse 'args' as flags
           let flags = args.iter()
             .skip(1)
@@ -133,7 +141,7 @@ impl Command {
             let mut removed = Tags::new();
             let mut priority = None;
 
-            info!("Got flags for task {}: {:?}", tr, flags);
+            info!("Got flags for tasks {:?}: {:?}", task_refs, flags);
             for flag in flags.into_iter() {
               match flag {
                 None => return Err(ParseError(format!("Invalid flag set '{:?}'", args))),
@@ -144,28 +152,30 @@ impl Command {
             }
 
             Ok(Command::ChangeTaskProperties {
-              task_ref: tr,
+              task_refs: task_refs,
               added_tags: added,
               removed_tags: removed,
               priority: priority,
             })
           } else {
-            Err(ParseError(format!("Invalid command '{}'", cmd)))
+            Err(ParseError(format!("Got no changes for task(s) {:?}", task_refs)))
           }
+        },
+        Some(cmd) => {
+          Err(ParseError(format!("Unknown command {}", cmd)))
         }
       }
     } else {
-      let arg0 = args.get(0).map(|s| s.as_ref());
-      match arg0 {
+      match args.get(0).map(|s| s.as_ref()) {
         Some("add") => {
           // TODO: Get rid of all this pesky cloning
-          let params = args.iter().skip(1);
+          let params = &args[1..];
 
-          let flags = params.clone()
+          let flags = params.iter()
             .flat_map(|s| Flag::from_str(&s))
             .collect();
 
-          let title = params.clone()
+          let title = params.iter()
             .filter(|p| Flag::from_str(p).is_none()) // Ugh
             .fold(String::new(), |acc, arg| acc + " " + arg.as_ref())
             .trim()
@@ -179,23 +189,18 @@ impl Command {
             Err(ParseError("Failed to parse parameters".into()))
           }
         },
-        _ => {
-          // Skip first arg if it's "list";
-          let args = if arg0 == Some("list") {
-            &args[1..]
-          } else {
-            &args[..]
-          };
-          
-          let flags = args.iter()
+        None | Some("list") => {
+          (if args.get(0).map(|s| s.as_ref()) == Some("list") { &args[1..] } else { &args[..] })
+            .iter()
             .map(Flag::from_str)
-            .collect::<Option<Vec<Flag>>>();
-          
-          flags.map(Command::List).ok_or(ParseError(format!("Found invalid flags: {:?}", args)))
+            .collect::<Option<Vec<Flag>>>()
+            .map(Command::List)
+            .ok_or_else(|| ParseError("Found invalid flags".into()))
         },
+        _ => panic!("Unknown command {:?}", args[0])
       }
     }
-  }
+  } 
 }
 
 #[cfg(test)]
@@ -222,9 +227,7 @@ mod tests {
                                         Flag::Priority(Priority::High)])));
     
     
-    let c = Command::from_slice(&["list",
-                                  "unimplemented"]);
-    assert!(c.is_err());
+    assert!(Command::from_slice(&["list", "unimplemented"]).is_err());
   }
 
   #[test]
