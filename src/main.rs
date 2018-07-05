@@ -345,7 +345,7 @@ mod tests {
     m.apply_effect(Effect::AddTask(t.clone()));
 
     let c = Command::ChangeTaskProperties {
-      refs: vec![t.uuid.into()],
+      task_refs: vec![t.uuid.into()],
       added_tags: Tags::new(),
       removed_tags: Tags::new(),
       priority: None,
