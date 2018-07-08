@@ -12,7 +12,7 @@ extern crate uuid;
 #[macro_use] extern crate log;
 #[macro_use] extern crate lazy_static;
 
-pub mod commands;
+pub mod command;
 pub mod file_lock;
 pub mod model;
 pub mod printer;

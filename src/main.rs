@@ -6,7 +6,7 @@ extern crate env_logger;
 
 use rtask::*;
 use rtask::terminal_size::*;
-use rtask::commands::Command;
+use rtask::command::{Command, Flag};
 
 use std::{env, fmt, fs, mem};
 use std::io::ErrorKind;
@@ -62,7 +62,6 @@ fn command_to_effects(model: &mut Model,
   match command {
     Command::List(mut flags) => {
       use rtask::printer::*;
-      use rtask::commands::Flag;
 
       scope.as_tag().map(|t| flags.push(Flag::TagPositive(t)));
 
