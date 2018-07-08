@@ -3,14 +3,18 @@ extern crate libc;
 extern crate regex;
 extern crate rusqlite;
 extern crate serde;
-#[macro_use] extern crate serde_derive;
-extern crate serde_json;
+#[macro_use]
+extern crate serde_derive;
 extern crate chrono;
+extern crate serde_json;
 extern crate uuid;
 
-#[macro_use] extern crate failure;
-#[macro_use] extern crate log;
-#[macro_use] extern crate lazy_static;
+#[macro_use]
+extern crate failure;
+#[macro_use]
+extern crate log;
+#[macro_use]
+extern crate lazy_static;
 
 pub mod command;
 pub mod file_lock;
@@ -20,15 +24,15 @@ pub mod task;
 pub mod task_ref;
 pub mod terminal_size;
 
-pub use task::*;
-pub use model::*;
 pub use file_lock::FileLock;
+pub use model::*;
+pub use task::*;
 
 pub trait StorageEngine: Sized + Drop {
-  type LoadErr;
+    type LoadErr;
 
-  fn new() -> Result<Self, Self::LoadErr>;
-  fn model<'a>(&'a mut self) -> &'a mut Model;
+    fn new() -> Result<Self, Self::LoadErr>;
+    fn model<'a>(&'a mut self) -> &'a mut Model;
 }
 
 mod sqlite_storage;
