@@ -15,23 +15,21 @@ pub enum Effect {
 }
 
 impl Effect {
-  // TODO: Do *all* effects have a related `TaskId`? If so, remove the
-  // `Option`
-  pub fn task_id<'a>(&'a self) -> Option<&'a Uuid> {
+  fn task_id<'a>(&'a self) -> &'a Uuid {
     use Effect::*;
     match *self {
-      AddTask(Task{ ref uuid, .. })  => Some(uuid),
-      ChangeTaskTags{ ref uuid, .. } => Some(uuid),
-      ChangeTaskState(ref u, _)      => Some(u),
-      ChangeTaskPriority(ref u, _)   => Some(u),
-      DeleteTask(ref u)              => Some(u),
+      AddTask(Task{ ref uuid, .. })  => uuid,
+      ChangeTaskTags{ ref uuid, .. } => uuid,
+      ChangeTaskState(ref u, _)      => u,
+      ChangeTaskPriority(ref u, _)   => u,
+      DeleteTask(ref u)              => u,
     }
   }
 
   pub fn print(&self, model: &Model, out: &mut io::Write) -> io::Result<()> {
     use Effect::*;
 
-    let task = model.get_task(self.task_id().unwrap()).unwrap(); // TODO
+    let task = model.get_task(self.task_id()).unwrap(); // TODO
 
     match self {
       AddTask(_)       => write!(out, "Added Task {}", task.short_id())?,
