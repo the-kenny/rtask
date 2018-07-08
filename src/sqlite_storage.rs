@@ -80,7 +80,7 @@ impl SqliteStorage {
     }
 
     let effects = try!(Self::query_effects(&db));
-    let mut model = Model::from_effects(effects);
+    let mut model = Model::from_effects(&effects);
 
     info!("Loaded {} tasks from disk", model.tasks.len());
 
@@ -185,7 +185,7 @@ mod tests {
     let task = Task::new("task #1");
     let mut store = SqliteStorage::load_from(&tempfile).unwrap();
     assert_eq!(0, store.model.tasks.len());
-    store.model.apply_effect(Effect::AddTask(task.clone()));
+    store.model.apply_effect(&Effect::AddTask(task.clone()));
     assert_eq!(1, store.model.tasks.len());
     mem::drop(store);       // store drops, gets serialized
 

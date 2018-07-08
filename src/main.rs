@@ -8,7 +8,7 @@ use rtask::*;
 use rtask::terminal_size::*;
 use rtask::command::{Command, Flag};
 
-use std::{env, fmt, fs, mem};
+use std::{env, fmt, fs, io, mem};
 use std::io::ErrorKind;
 
 pub const PID_FILE: &'static str = "tasks.pid";
@@ -119,7 +119,6 @@ fn command_to_effects(model: &mut Model,
         }).take(task_limit).collect();
 
       if !rows.is_empty() {
-        use std::io;
         let mut p = TablePrinter::new();
         p.width_limit = Some(terminal_size.columns - 12);
         p.titles = vec!["id", "pri", "age", "desc", "urg"];
@@ -272,32 +271,10 @@ fn main() {
         },
         Ok(effects) => {
           for effect in effects {
-            // Ugh, cloning (to make the borrow checker happy)
-            let t = effect.task_id().and_then(|id| model.get_task(id)).cloned();
+            info!("Applying Effect: {:?}", effect);
 
-            info!("Effect: {:?}", effect);
-            model.apply_effect(effect.clone());
-
-            // Print effect descriptions
-            use rtask::Effect::*;
-            match effect {
-              AddTask(ref t)       => println!("Added Task {}", t.short_id()),
-              DeleteTask(_)        => println!("Deleted task '{}'", t.unwrap().description),
-              ChangeTaskTags{ ref added, ref removed, ..} => {
-                if !added.is_empty()   { println!("Added tags {:?}",   added); }
-                if !removed.is_empty() { println!("Removed tags {:?}", removed); }
-              }
-              ChangeTaskState(_uuid, ref state) => {
-                match *state {
-                  TaskState::Done(_)     => println!("Marking task '{}' as done", t.unwrap().description),
-                  TaskState::Open        => println!("Marking task '{}' as open", t.unwrap().description),
-                  TaskState::Canceled(_) => println!("Marking task '{}' as canceled", t.unwrap().description),
-                }
-              },
-              ChangeTaskPriority(_uuid, ref priority) => {
-                println!("Changed priority of task '{}' to {}", t.unwrap().description, priority);
-              }
-            }
+            model.apply_effect(&effect);
+            effect.print(&model, &mut io::stdout()).unwrap();
           }
         }
       }
@@ -335,13 +312,13 @@ fn chdir() {
 #[cfg(test)]
 mod tests {
   use super::rtask::*;
-  use super::rtask::commands::*;
+  use super::rtask::command::*;
 
   #[test]
   fn test_command_to_effect_no_noop_effects() {
     let mut m = Model::new();
     let t = Task::new("bar");
-    m.apply_effect(Effect::AddTask(t.clone()));
+    m.apply_effect(&Effect::AddTask(t.clone()));
 
     let c = Command::ChangeTaskProperties {
       task_refs: vec![t.uuid.into()],

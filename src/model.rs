@@ -2,6 +2,8 @@ use task::*;
 use task_ref::TaskRef;
 use std::collections::{BTreeMap, HashMap};
 
+use std::io;
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Effect {
   AddTask(Task),
@@ -25,6 +27,33 @@ impl Effect {
       DeleteTask(ref u)              => Some(u),
     }
   }
+
+  pub fn print(&self, model: &Model, out: &mut io::Write) -> io::Result<()> {
+    use Effect::*;
+
+    let task = model.get_task(self.task_id().unwrap()).unwrap(); // TODO
+
+    match self {
+      AddTask(_)       => write!(out, "Added Task {}", task.short_id())?,
+      DeleteTask(_)    => write!(out, "Deleted task '{}'", task.description)?,
+      ChangeTaskTags{ ref added, ref removed, ..} => {
+        if !added.is_empty()   { write!(out, "Added tags {:?}",   added)?; }
+        if !removed.is_empty() { write!(out, "Removed tags {:?}", removed)?; }
+      }
+      ChangeTaskState(_uuid, ref state) => {
+        match *state {
+          TaskState::Done(_)     => write!(out, "Marking task '{}' as done", task.description)?,
+          TaskState::Open        => write!(out, "Marking task '{}' as open", task.description)?,
+          TaskState::Canceled(_) => write!(out, "Marking task '{}' as canceled", task.description)?,
+        }
+      },
+      ChangeTaskPriority(_uuid, ref priority) => {
+        write!(out, "Changed priority of task '{}' to {}", task.description, priority)?;
+      }
+    };
+
+    Ok(())
+  }
 }
 
 pub type ScopeName = String;
@@ -35,7 +64,7 @@ pub struct Model {
   pub tasks: HashMap<Uuid, Task>,
   pub applied_effects: Vec<Effect>,
   pub numerical_ids: NumericalIds,
-  
+
   is_dirty: bool,
 }
 
@@ -50,14 +79,14 @@ impl Model {
     }
   }
 
-  pub fn from_effects(effects: Vec<Effect>) -> Self {
+  pub fn from_effects(effects: &[Effect]) -> Self {
     let mut model = Self::new();
-    for effect in effects { model.apply_effect(effect) }
+    for effect in effects { model.apply_effect(&effect) }
     model.is_dirty = false;
     model
   }
 
-  pub fn apply_effect(&mut self, effect: Effect) -> () {
+  pub fn apply_effect(&mut self, effect: &Effect) -> () {
     use Effect::*;
     match effect.clone() {
       AddTask(task)                          => { self.add_task(task); },
@@ -67,7 +96,7 @@ impl Model {
       DeleteTask(uuid)                       => { self.delete_task(&uuid); },
     }
 
-    self.applied_effects.push(effect);
+    self.applied_effects.push(effect.clone());
     self.is_dirty = true;
   }
 
