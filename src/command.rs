@@ -26,11 +26,11 @@ pub enum Flag {
 
 impl Flag {
   pub fn from_str<S: AsRef<str>>(s: S) -> Option<Flag> {
-      lazy_static! {
-        static ref PRIORITY_RE: Regex = Regex::new("^p(?:riority)?:(.+)$").unwrap();
-        static ref TAG_POS_RE:  Regex = Regex::new("^\\+(.+)$").unwrap();
-        static ref TAG_NEG_RE:  Regex = Regex::new("^-(.+)$").unwrap();
-      }
+    lazy_static! {
+      static ref PRIORITY_RE: Regex = Regex::new("^p(?:riority)?:(.+)$").unwrap();
+      static ref TAG_POS_RE:  Regex = Regex::new("^\\+(.+)$").unwrap();
+      static ref TAG_NEG_RE:  Regex = Regex::new("^-(.+)$").unwrap();
+    }
 
     let s = s.as_ref();
 
