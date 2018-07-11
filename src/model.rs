@@ -36,29 +36,29 @@ impl Effect {
         let task = model.get_task(self.task_id()).unwrap(); // TODO
 
         match self {
-            AddTask(_) => write!(out, "Added Task {}", task.short_id())?,
-            DeleteTask(_) => write!(out, "Deleted task '{}'", task.description)?,
+            AddTask(_) => writeln!(out, "Added Task {}", task.short_id())?,
+            DeleteTask(_) => writeln!(out, "Deleted task '{}'", task.description)?,
             ChangeTaskTags {
                 ref added,
                 ref removed,
                 ..
             } => {
                 if !added.is_empty() {
-                    write!(out, "Added tags {:?}", added)?;
+                    writeln!(out, "Added tags {:?}", added)?;
                 }
                 if !removed.is_empty() {
-                    write!(out, "Removed tags {:?}", removed)?;
+                    writeln!(out, "Removed tags {:?}", removed)?;
                 }
             }
             ChangeTaskState(_uuid, ref state) => match *state {
-                TaskState::Done(_) => write!(out, "Marking task '{}' as done", task.description)?,
-                TaskState::Open => write!(out, "Marking task '{}' as open", task.description)?,
+                TaskState::Done(_) => writeln!(out, "Marking task '{}' as done", task.description)?,
+                TaskState::Open => writeln!(out, "Marking task '{}' as open", task.description)?,
                 TaskState::Canceled(_) => {
-                    write!(out, "Marking task '{}' as canceled", task.description)?
+                    writeln!(out, "Marking task '{}' as canceled", task.description)?
                 }
             },
             ChangeTaskPriority(_uuid, ref priority) => {
-                write!(
+                writeln!(
                     out,
                     "Changed priority of task '{}' to {}",
                     task.description, priority
