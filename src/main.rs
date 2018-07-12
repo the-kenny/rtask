@@ -299,8 +299,8 @@ fn main() {
                     for effect in effects {
                         info!("Applying Effect: {:?}", effect);
 
-                        effect.print(&model, &mut io::stdout()).unwrap();
                         model.apply_effect(&effect);
+                        effect.print(&model, &mut io::stdout()).unwrap();
                     }
                 }
             }

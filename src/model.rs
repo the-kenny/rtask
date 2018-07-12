@@ -33,38 +33,43 @@ impl Effect {
     pub fn print(&self, model: &Model, out: &mut io::Write) -> io::Result<()> {
         use Effect::*;
 
-        let task = model.get_task(self.task_id()).unwrap(); // TODO
-
-        match self {
-            AddTask(_) => writeln!(out, "Added Task {}", task.short_id())?,
-            DeleteTask(_) => writeln!(out, "Deleted task '{}'", task.description)?,
-            ChangeTaskTags {
-                ref added,
-                ref removed,
-                ..
-            } => {
-                if !added.is_empty() {
-                    writeln!(out, "Added tags {:?}", added)?;
+        // Special handling for `DeleteTask` as `task` isn't in
+        // `model` anymore
+        if let DeleteTask(_) = self {
+            writeln!(out, "Deleted task {}", self.task_id())?;
+        } else {
+            let task = model.get_task(self.task_id()).unwrap(); // TODO
+            match self {
+                DeleteTask(_) => unreachable!(),
+                AddTask(_) => writeln!(out, "Added Task {}", task.short_id())?,
+                ChangeTaskTags {
+                    ref added,
+                    ref removed,
+                    ..
+                } => {
+                    if !added.is_empty() {
+                        writeln!(out, "Added tags {:?}", added)?;
+                    }
+                    if !removed.is_empty() {
+                        writeln!(out, "Removed tags {:?}", removed)?;
+                    }
                 }
-                if !removed.is_empty() {
-                    writeln!(out, "Removed tags {:?}", removed)?;
+                ChangeTaskState(_uuid, ref state) => match *state {
+                    TaskState::Done(_) => writeln!(out, "Marking task '{}' as done", task.description)?,
+                    TaskState::Open => writeln!(out, "Marking task '{}' as open", task.description)?,
+                    TaskState::Canceled(_) => {
+                        writeln!(out, "Marking task '{}' as canceled", task.description)?
+                    }
+                },
+                ChangeTaskPriority(_uuid, ref priority) => {
+                    writeln!(
+                        out,
+                        "Changed priority of task '{}' to {}",
+                        task.description, priority
+                    )?;
                 }
-            }
-            ChangeTaskState(_uuid, ref state) => match *state {
-                TaskState::Done(_) => writeln!(out, "Marking task '{}' as done", task.description)?,
-                TaskState::Open => writeln!(out, "Marking task '{}' as open", task.description)?,
-                TaskState::Canceled(_) => {
-                    writeln!(out, "Marking task '{}' as canceled", task.description)?
-                }
-            },
-            ChangeTaskPriority(_uuid, ref priority) => {
-                writeln!(
-                    out,
-                    "Changed priority of task '{}' to {}",
-                    task.description, priority
-                )?;
-            }
-        };
+            };
+        }
 
         Ok(())
     }
