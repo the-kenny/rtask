@@ -113,6 +113,7 @@ fn command_to_effects(
                         task.priority.to_string(),
                         task.age().to_string(),
                         task.description.clone(),
+                        task.tags.iter().cloned().collect::<Vec<_>>().join(","),
                         format!("{:.2}", task.urgency()),
                     ];
 
@@ -136,8 +137,8 @@ fn command_to_effects(
 
             if !rows.is_empty() {
                 let mut p = TablePrinter::new();
-                p.width_limit = Some(terminal_size.columns - 12);
-                p.titles = vec!["id", "pri", "age", "desc", "urg"];
+                p.titles = vec!["id", "pri", "age", "desc", "tags", "urg"];
+                p.width_limit = Some(terminal_size.columns - (2*p.titles.len()));
                 p.alignments.insert("desc", Alignment::Left);
                 p.print(&mut io::stdout(), &rows).unwrap();
 
