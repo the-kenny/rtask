@@ -15,7 +15,6 @@ in rec {
     RTASK_DIRECTORY = "./store/";
 
     shellHook = ''
-      export PATH="target/debug/:$PATH";
     '';
   };
 } 

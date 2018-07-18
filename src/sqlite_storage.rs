@@ -14,7 +14,13 @@ pub struct SqliteStorage {
     db: Connection,
 }
 
-pub type Error = rusqlite::Error;
+#[derive(Debug, Fail, From)]
+pub enum Error {
+    #[fail(display = "Sqlite Error: {}", _0)]
+    Sqlite(rusqlite::Error),
+    #[fail(display = "Json Error: {}", _0)]
+    Json(serde_json::Error)
+}
 
 impl SqliteStorage {
     fn is_initialized(db: &Connection) -> bool {
@@ -49,29 +55,33 @@ impl SqliteStorage {
     fn query_effects(db: &Connection) -> Result<Vec<Effect>, Error> {
         let mut stmt = try!(db.prepare("select * from effects order by id"));
 
-        let effects: Result<Vec<Effect>, _> = try!(stmt.query_map(&[], |row| row.get(1)))
-            .map(|row| {
-                let data: String = try!(row);
-                Ok(serde_json::from_str(&data).unwrap())
-            })
-            .collect();
+        let rows = stmt.query_map(&[], |row| row.get(1))?;
+        let effects: Vec<Effect> = rows.map(|json_str| {
+            let json_str: String = json_str?;
+            let json = serde_json::from_str(&json_str)?;
+
+            Ok(json)
+        }).collect::<Result<Vec<_>, Error>>()?;
 
         debug!("effects: #{:?}", effects);
 
-        effects
+        Ok(effects)
     }
 
     fn query_numerical_ids(db: &Connection) -> Result<Vec<(String, u64, Uuid)>, Error> {
         let mut stmt = try!(db.prepare("select scope, id, uuid from numerical_ids"));
 
-        let uuids = try!(stmt.query_map(&[], |row| {
+        let rows = try!(stmt.query_map(&[], |row| {
             let scope: String = row.get(0);
             let n: i64 = row.get(1);
             let uuid: String = row.get(2);
-            let uuid: Uuid = serde_json::from_str(&uuid).unwrap();
             (scope, n as u64, uuid)
-        })).map(Result::unwrap)
-            .collect();
+        }));
+        
+        let uuids = rows.map(|row| {
+            let (scope, n, uuid_str) = row?;
+            Ok((scope, n, serde_json::from_str(&uuid_str)?))
+        }).collect::<Result<Vec<_>, Error>>()?;
 
         debug!("numerical_ids: {:?}", uuids);
 

@@ -3,18 +3,15 @@ extern crate libc;
 extern crate regex;
 extern crate rusqlite;
 extern crate serde;
-#[macro_use]
-extern crate serde_derive;
 extern crate chrono;
 extern crate serde_json;
 extern crate uuid;
 
-#[macro_use]
-extern crate failure;
-#[macro_use]
-extern crate log;
-#[macro_use]
-extern crate lazy_static;
+#[macro_use] extern crate derive_more;
+#[macro_use] extern crate failure;
+#[macro_use] extern crate lazy_static;
+#[macro_use] extern crate log;
+#[macro_use] extern crate serde_derive;
 
 pub mod command;
 pub mod file_lock;
