@@ -75,9 +75,9 @@ impl fmt::Display for Flag {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use self::Flag::*;
         match *self {
-            Priority(ref p) => f.write_fmt(format_args!("priority:{}", p)),
-            TagPositive(ref t) => f.write_fmt(format_args!("+{}", t)),
-            TagNegative(ref t) => f.write_fmt(format_args!("-{}", t)),
+            Priority(ref p) => write!(f, "priority:{}", p),
+            TagPositive(ref t) => write!(f, "+{}", t),
+            TagNegative(ref t) => write!(f, "-{}", t),
         }
     }
 }
