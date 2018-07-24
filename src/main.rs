@@ -278,6 +278,8 @@ fn main() {
     let mut lock = FileLock::new(PID_FILE).expect("Failed to acquire lock");
     lock.delete_on_drop = true;
 
+    rtask::cli::test_args();
+
     let mut store = Storage::new().expect("Failed to open store");
     let command = Command::from_args();
 
