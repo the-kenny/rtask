@@ -5,10 +5,18 @@ extern crate log;
 #[macro_use]
 extern crate failure;
 extern crate env_logger;
+extern crate ansi_term;
+extern crate libc;
 
-use rtask::command::{Command, Flag};
-use rtask::terminal_size::*;
 use rtask::*;
+use rtask::command::{Command, Flag};
+
+mod printer;
+use printer::*;
+
+mod terminal_size;
+use terminal_size::*;
+
 
 use std::io::ErrorKind;
 use std::{env, fmt, fs, io, mem};
@@ -64,8 +72,6 @@ fn command_to_effects(
 
     match command {
         Command::List(mut flags) => {
-            use rtask::printer::*;
-
             scope.as_tag().map(|t| flags.push(Flag::TagPositive(t)));
 
             info!("Listing filtered by flags {:?}", flags);

@@ -1,0 +1,13 @@
+[package]
+name = "rtask_cli"
+version = "0.1.0"
+authors = ["Moritz Ulrich <moritz@tarn-vedra.de>"]
+
+[dependencies]
+rtask = { path = "../librtask" }
+chrono = { version = "0.4.4" }
+failure = "0.1.1"
+log = "0.4.3"
+env_logger = "0.5.11"
+ansi_term = "0.11.0"
+libc = "0.2.42"

@@ -1,4 +1,3 @@
-extern crate ansi_term;
 extern crate libc;
 extern crate regex;
 extern crate rusqlite;
@@ -16,10 +15,8 @@ extern crate uuid;
 pub mod command;
 pub mod file_lock;
 pub mod model;
-pub mod printer;
 pub mod task;
 pub mod task_ref;
-pub mod terminal_size;
 
 pub use file_lock::FileLock;
 pub use model::*;
