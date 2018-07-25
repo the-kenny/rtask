@@ -1,4 +1,3 @@
-extern crate ansi_term;
 extern crate libc;
 extern crate regex;
 extern crate rusqlite;
@@ -13,14 +12,11 @@ extern crate uuid;
 #[macro_use] extern crate log;
 #[macro_use] extern crate serde_derive;
 
-pub mod cli;
 pub mod command;
 pub mod file_lock;
 pub mod model;
-pub mod printer;
 pub mod task;
 pub mod task_ref;
-pub mod terminal_size;
 
 pub use file_lock::FileLock;
 pub use model::*;

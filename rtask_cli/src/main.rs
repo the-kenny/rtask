@@ -5,10 +5,20 @@ extern crate log;
 #[macro_use]
 extern crate failure;
 extern crate env_logger;
+extern crate ansi_term;
+extern crate libc;
 
-use rtask::command::{Command, Flag};
-use rtask::terminal_size::*;
 use rtask::*;
+use rtask::command::{Command, Flag};
+
+mod cli;
+
+mod printer;
+use printer::*;
+
+mod terminal_size;
+use terminal_size::*;
+
 
 use std::io::ErrorKind;
 use std::{env, fmt, fs, io, mem};
@@ -64,8 +74,6 @@ fn command_to_effects(
 
     match command {
         Command::List(mut flags) => {
-            use rtask::printer::*;
-
             scope.as_tag().map(|t| flags.push(Flag::TagPositive(t)));
 
             info!("Listing filtered by flags {:?}", flags);
@@ -278,7 +286,7 @@ fn main() {
     let mut lock = FileLock::new(PID_FILE).expect("Failed to acquire lock");
     lock.delete_on_drop = true;
 
-    rtask::cli::test_args();
+    cli::test_args();
 
     let mut store = Storage::new().expect("Failed to open store");
     let command = Command::from_args();
