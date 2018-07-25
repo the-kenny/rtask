@@ -20,7 +20,6 @@ fn task_id_arg<'a, 'b>() -> Arg<'a, 'b> {
         .validator(|arg| TaskRef::from_str(&arg)
                    .map(|_| ())
                    .map_err(|err| format!("{}", err)))
-
 }
 
 fn app<'a, 'b>() -> App<'a, 'b> {
@@ -35,8 +34,12 @@ fn app<'a, 'b>() -> App<'a, 'b> {
                     .arg(task_id_arg().multiple(true)))
 
         .subcommand(SubCommand::with_name("add")
-                    .arg(Arg::with_name("TASK DESCRIPTION")
-                         .multiple(true)))
+                    .setting(AppSettings::AllowLeadingHyphen)
+                    .setting(AppSettings::AllowMissingPositional)
+                    .arg(Arg::with_name("TASK_DESCRIPTION")
+                         .multiple(true)
+                         .min_values(1)
+                         .index(1)))
         .subcommand(SubCommand::with_name("list")
                     .setting(AppSettings::AllowLeadingHyphen)
                     .setting(AppSettings::AllowMissingPositional)
@@ -45,7 +48,7 @@ fn app<'a, 'b>() -> App<'a, 'b> {
 
 pub fn get_command() -> Result<Command, ::command::ParseError> {
     let matches = app().get_matches();
-    info!("args: {:?}", matches);
+    debug!("args: {:?}", matches);
 
     match matches.subcommand() {
         ("", None) => Ok(Command::List(vec![])),
@@ -55,6 +58,27 @@ pub fn get_command() -> Result<Command, ::command::ParseError> {
                 .map_or(vec![], |args| args.flat_map(Flag::from_str).collect());
             Ok(Command::List(flags))
         },
+        ("add", args) => {
+            let args: Vec<&str> = args
+                .and_then(|args| args.values_of("TASK_DESCRIPTION"))
+                .map(|args| args.collect())
+                .unwrap_or(vec![]);
+
+            // TODO: Only strip trailing and leading flags
+            let flags: Vec<Flag> = args.iter().flat_map(|s| Flag::from_str(&s)).collect();
+            let title: String = args.iter()
+                .filter(|p| Flag::from_str(p).is_none()) // Ugh
+                .fold(String::new(), |acc, arg| acc + " " + arg.as_ref())
+                .trim()
+                .to_string();
+
+            if title != "" {
+                debug!("title: {:?}, flags: {:?}", title, flags);
+                Ok(Command::Add(title, flags))
+            } else {
+                Err(::command::ParseError("Failed to parse parameters".into()))
+            }
+        }
         command => unimplemented!("subcommand {:?}", command)
     }
 }
