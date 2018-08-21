@@ -78,7 +78,8 @@ pub fn get_command() -> Result<Command, ::command::ParseError> {
             } else {
                 Err(::command::ParseError("Failed to parse parameters".into()))
             }
-        }
+        },
+
         command => unimplemented!("subcommand {:?}", command)
     }
 }
