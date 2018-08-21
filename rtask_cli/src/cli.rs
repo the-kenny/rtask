@@ -4,7 +4,7 @@ use self::clap::{Arg, App, AppSettings, SubCommand};
 
 use std::str::FromStr;
 
-use task_ref::TaskRef;
+use task_ref::{TaskRef, TaskRefError};
 use ::command::{Command, Flag};
 
 fn flags_arg<'a, 'b>() -> Arg<'a, 'b> {
@@ -57,6 +57,13 @@ pub fn get_command() -> Result<Command, ::command::ParseError> {
                 .and_then(|args| args.values_of("FLAG"))
                 .map_or(vec![], |args| args.flat_map(Flag::from_str).collect());
             Ok(Command::List(flags))
+        },
+        ("show", Some(args)) => {
+            let refs = args.values_of("TASK").expect("Couldn't get IDs")
+                .map(TaskRef::from_str)
+                .collect::<Result<Vec<TaskRef>, TaskRefError>>()?;
+
+            Ok(Command::Show(refs))
         },
         ("add", args) => {
             let args: Vec<&str> = args

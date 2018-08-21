@@ -11,7 +11,7 @@ pub enum TaskRef {
 pub type TaskRefs = Vec<TaskRef>;
 
 #[derive(Debug, PartialEq, Eq, Fail)]
-#[fail(display = "Unknown task reference {:?}", _0)]
+#[fail(display = "Invalid task reference {:?}", _0)]
 pub struct TaskRefError(String);
 
 use std::fmt;
