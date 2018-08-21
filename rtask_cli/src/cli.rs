@@ -65,6 +65,27 @@ pub fn get_command() -> Result<Command, ::command::ParseError> {
 
             Ok(Command::Show(refs))
         },
+        ("cancel", Some(args)) => {
+            let refs = args.values_of("TASK").expect("Couldn't get IDs")
+                .map(TaskRef::from_str)
+                .collect::<Result<Vec<TaskRef>, TaskRefError>>()?;
+
+            Ok(Command::MarkCanceled(refs))
+        },
+        ("done", Some(args)) => {
+            let refs = args.values_of("TASK").expect("Couldn't get IDs")
+                .map(TaskRef::from_str)
+                .collect::<Result<Vec<TaskRef>, TaskRefError>>()?;
+
+            Ok(Command::MarkDone(refs))
+        },
+        ("delete", Some(args)) => {
+            let refs = args.values_of("TASK").expect("Couldn't get IDs")
+                .map(TaskRef::from_str)
+                .collect::<Result<Vec<TaskRef>, TaskRefError>>()?;
+
+            Ok(Command::Delete(refs))
+        },
         ("add", args) => {
             let args: Vec<&str> = args
                 .and_then(|args| args.values_of("TASK_DESCRIPTION"))
