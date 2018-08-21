@@ -148,15 +148,11 @@ impl Drop for SqliteStorage {
             .unwrap();
         debug!("Got {} rows", row_count);
 
-        for (n, effect) in self.model.applied_effects.iter().enumerate() {
-            if n >= row_count as usize {
-                let json = serde_json::to_string(&effect).unwrap();
-                debug!("Inserting JSON: {:?}", json);
-                tx.execute("insert into effects (json) values ($1)", &[&json])
-                    .unwrap();
-            } else {
-                debug!("Skipping row {}", n);
-            }
+        for effect in self.model.applied_effects.iter().skip(row_count as usize) {
+            let json = serde_json::to_string(&effect).unwrap();
+            debug!("Inserting JSON: {:?}", json);
+            tx.execute("insert into effects (json) values ($1)", &[&json])
+                .unwrap();
         }
 
         debug!("Storing numerical_ids");
